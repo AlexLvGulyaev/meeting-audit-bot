@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Meeting Audit Bot{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<div class="grid">
+  <div class="card">
+    <div class="stat">{{ executions_count }}</div>
+    <div class="muted">Execution sessions</div>
+  </div>
+  <div class="card">
+    <div class="stat">{{ audits_count }}</div>
+    <div class="muted">Audits stored</div>
+  </div>
+  <div class="card">
+    <div class="stat">{{ config.active_provider }}</div>
+    <div class="muted">Active provider</div>
+  </div>
+  <div class="card">
+    <div class="stat">{{ config.prompt_id }}</div>
+    <div class="muted">Active prompt</div>
+  </div>
+</div>
+
+<h2>Recent audits</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Status</th>
+        <th>Provider</th>
+        <th>Prompt</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for record in recent_audits %}
+      <tr>
+        <td><a href="/admin/audit">{{ record.id }}</a></td>
+        <td><span class="badge badge-{{ record.status }}">{{ record.status }}</span></td>
+        <td>{{ record.provider or "—" }}</td>
+        <td>{{ record.prompt_id or "—" }}</td>
+        <td>{{ record.created_at }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">No audits yet</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Runtime config</h2>
+<div class="card">
+  <pre>{{ config | tojson(indent=2) }}</pre>
+</div>
+{% endblock %}

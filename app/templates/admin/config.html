@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Config — Meeting Audit Bot{% endblock %}
+{% block content %}
+<h1>Runtime config</h1>
+
+<form method="post" action="/admin/config">
+  <div class="card">
+    <h3>Active provider</h3>
+    <label for="active_provider">Provider</label>
+    <select id="active_provider" name="active_provider">
+      <option value="openai" {% if config.active_provider == 'openai' %}selected{% endif %}>openai</option>
+      <option value="gigachat" {% if config.active_provider == 'gigachat' %}selected{% endif %}>gigachat</option>
+    </select>
+
+    <label for="active_model">Model</label>
+    <input id="active_model" name="active_model" value="{{ config.active_model }}" required>
+  </div>
+
+  <div class="card">
+    <h3>Fallback provider</h3>
+    <label for="fallback_provider">Provider</label>
+    <select id="fallback_provider" name="fallback_provider">
+      <option value="openai" {% if config.fallback_provider == 'openai' %}selected{% endif %}>openai</option>
+      <option value="gigachat" {% if config.fallback_provider == 'gigachat' %}selected{% endif %}>gigachat</option>
+    </select>
+
+    <label for="fallback_model">Model</label>
+    <input id="fallback_model" name="fallback_model" value="{{ config.fallback_model }}" required>
+  </div>
+
+  <div class="card">
+    <h3>Active prompt</h3>
+    <label for="prompt_id">Prompt</label>
+    <select id="prompt_id" name="prompt_id">
+      {% for p in prompts %}
+      <option value="{{ p.id }}" {% if config.prompt_id == p.id %}selected{% endif %}>{{ p.id }} ({{ p.source }})</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <button type="submit">Save config</button>
+</form>
+
+<h2>Default config (read-only)</h2>
+<div class="card">
+  <pre>{{ default_config | tojson(indent=2) }}</pre>
+</div>
+{% endblock %}

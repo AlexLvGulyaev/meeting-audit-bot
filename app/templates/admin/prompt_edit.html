@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Edit prompt {{ prompt_id }}{% endblock %}
+{% block content %}
+<h1>Edit prompt: {{ prompt_id }}</h1>
+
+<form method="post" action="/admin/prompts/{{ prompt_id }}/edit">
+  <div class="card">
+    <label for="content">Custom prompt content</label>
+    <textarea id="content" name="content" required>{{ prompt.content }}</textarea>
+  </div>
+  <button type="submit">Save custom override</button>
+  <a href="/admin/prompts" class="secondary" style="margin-left:1rem">Cancel</a>
+</form>
+{% endblock %}

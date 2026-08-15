@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: meeting-audit-bot-db
+    networks:
+      - n8n_default
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-meeting_audit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meeting_audit}
+      POSTGRES_DB: ${POSTGRES_DB:-meeting_audit}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-meeting_audit} -d ${POSTGRES_DB:-meeting_audit}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: meeting-audit-bot-web
+    env_file: .env
+    networks:
+      - n8n_default
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://meeting_audit:meeting_audit@db:5432/meeting_audit}
+      STORAGE_DIR: ${STORAGE_DIR:-/app/storage}
+    volumes:
+      - meeting_audit_storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  meeting_audit_storage:
+
+networks:
+  n8n_default:
+    external: true

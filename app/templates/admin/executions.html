@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Executions — Meeting Audit Bot{% endblock %}
+{% block content %}
+<h1>Execution sessions ({{ total }})</h1>
+
+<form method="get" action="/admin/executions" style="margin-bottom:1rem">
+  <label class="muted">Filter by status:</label>
+  <select name="status_filter" onchange="this.form.submit()">
+    <option value="" {% if not status_filter %}selected{% endif %}>All</option>
+    <option value="success" {% if status_filter == 'success' %}selected{% endif %}>success</option>
+    <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>failed</option>
+    <option value="running" {% if status_filter == 'running' %}selected{% endif %}>running</option>
+  </select>
+</form>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Session ID</th>
+        <th>User</th>
+        <th>Filename</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for session in sessions %}
+      <tr>
+        <td><a href="/admin/executions/{{ session.session_id }}">{{ session.session_id[:8] }}</a></td>
+        <td>{{ session.username or session.user_id or "—" }}</td>
+        <td>{{ session.filename or "—" }}</td>
+        <td><span class="badge badge-{{ session.status }}">{{ session.status }}</span></td>
+        <td>{{ session.created_at }}</td>
+        <td>{{ session.updated_at }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">No sessions</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="pagination">
+  {% if page > 1 %}
+    <a href="/admin/executions?page={{ page - 1 }}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}">← Prev</a>
+  {% endif %}
+  <span class="muted">Page {{ page }} of {{ page_count }}</span>
+  {% if page < page_count %}
+    <a href="/admin/executions?page={{ page + 1 }}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}">Next →</a>
+  {% endif %}
+</div>
+{% endblock %}
