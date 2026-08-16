@@ -7,6 +7,7 @@ from app.core.config import Settings
 from app.core.runtime_config import RuntimeConfig
 from app.services.providers.factory import get_provider
 from app.services.prompt_loader import PromptLoader
+from app.utils.text import strip_markdown_fence
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ class AuditService:
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-            analysis = provider_response["content"]
+            analysis = strip_markdown_fence(provider_response["content"])
             usage = provider_response.get("usage")
             return {
                 "analysis": analysis,
@@ -82,7 +83,7 @@ class AuditService:
                         temperature=float(fallback_cfg.get("temperature", 0.1)),
                         max_tokens=int(fallback_cfg.get("max_tokens", 2048)),
                     )
-                    analysis = provider_response["content"]
+                    analysis = strip_markdown_fence(provider_response["content"])
                     usage = provider_response.get("usage")
                     return {
                         "analysis": analysis,

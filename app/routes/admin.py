@@ -20,6 +20,7 @@ from app.services.execution import ExecutionService
 from app.services.prompt_loader import PromptLoader
 from app.services.providers.factory import get_provider
 from app.services.storage import StorageService
+from app.utils.text import strip_markdown_fence
 
 logger = logging.getLogger(__name__)
 
@@ -53,20 +54,8 @@ def _json_dumps(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, indent=2, default=default)
 
 
-def _strip_markdown_fence(text: str | None) -> str:
-    if not text:
-        return ""
-    lines = text.splitlines()
-    # Убираем стартовую и финальную строку ```markdown / ```
-    if lines and lines[0].strip().startswith("```"):
-        lines = lines[1:]
-    if lines and lines[-1].strip() == "```":
-        lines = lines[:-1]
-    return "\n".join(lines).strip()
-
-
 templates.env.globals["_json_dumps"] = _json_dumps
-templates.env.filters["strip_markdown_fence"] = _strip_markdown_fence
+templates.env.filters["strip_markdown_fence"] = strip_markdown_fence
 
 COOKIE_NAME = "meeting_audit_admin"
 DEMO_SESSION_TTL_SECONDS = 3600
