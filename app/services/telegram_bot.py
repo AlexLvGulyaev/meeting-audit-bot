@@ -236,7 +236,7 @@ class TelegramBot:
 
             await progress.edit_text("Анализ готов. Отправляю результат...")
             for chunk in self._split_for_telegram(analysis):
-                await message.reply_text(chunk)
+                await message.reply_text(chunk, parse_mode="Markdown")
             await progress.delete()
 
         except Exception as exc:
