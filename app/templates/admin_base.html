@@ -303,7 +303,7 @@
 
     .ai-divider { height: 1px; background: var(--ai-border); margin: 14px 0; border: none; }
 
-    /* Master-detail (Логи / Аудит). */
+    /* Master-detail (Сессии / Аудит). */
     .ai-master-detail { display: flex; gap: 12px; align-items: flex-start; }
     .ai-master-detail--fill { flex: 1 1 auto; min-height: 0; align-items: stretch; overflow: hidden; }
     .ai-master-detail--fill .ai-list-panel { position: static; max-height: none; height: 100%; }
@@ -485,7 +485,7 @@
           <span class="ai-nav__group-label">Операционная консоль</span>
           <div class="ai-nav__items">
             <a class="ai-nav__link {{ 'ai-nav__link--active' if request.path.startswith('/admin/executions') }}" href="/admin/executions">
-              <span class="ai-nav__icon">📜</span> Логи
+              <span class="ai-nav__icon">📜</span> Сессии
             </a>
             <a class="ai-nav__link {{ 'ai-nav__link--active' if request.path.startswith('/admin/audit') }}" href="/admin/audit">
               <span class="ai-nav__icon">📋</span> Аудит

@@ -1,8 +1,8 @@
 {% extends "admin_base.html" %}
 
-{% block title %}Логи · Админка{% endblock %}
-{% block page_title %}Логи{% endblock %}
-{% block page_subtitle %}Операционная консоль: сессии обработки файлов и этапы пайплайна{% endblock %}
+{% block title %}Сессии - Админка{% endblock %}
+{% block page_title %}Сессии{% endblock %}
+{% block page_subtitle %}Операционная консоль: обработка файлов и этапы пайплайна{% endblock %}
 
 {% block page_actions %}
   <a class="ai-btn ai-btn--secondary ai-btn--small" href="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">↻ Обновить</a>
