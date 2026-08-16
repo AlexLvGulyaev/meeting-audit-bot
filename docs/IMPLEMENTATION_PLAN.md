@@ -35,11 +35,11 @@
 | 4 | Multi-provider LLM + fallback | ✅ |
 | 5 | Execution tracing + audit-log + demo-RBAC + Telegram-лимиты | ✅ |
 | 6 | Сохранение файлов: `storage/uploads/`, `storage/transcripts/`, `storage/audits/` | ✅ |
-| 7 | Промпты для ДЗ: `sales-call.md`, `online-lesson.md`, `client-chat.md` | ✅ |
+| 7 | Дополнительные промпты: `sales-call.md`, `online-lesson.md`, `client-chat.md` | ✅ |
 | 8 | Docker Compose + DEPLOYMENT_GUIDE | ✅ |
 | 9 | Deployment Validation | ✅ |
 | 10 | Документация APL | ✅ |
-| 11 | Публикация в GitHub + отчёт по ДЗ | ✅ |
+| 11 | Публикация в GitHub + портфельные материалы | ✅ |
 
 ---
 

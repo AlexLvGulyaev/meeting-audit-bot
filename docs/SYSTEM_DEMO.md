@@ -5,7 +5,7 @@
 **Статус:** as-built — скриншот-тур по живому демо.
 
 🤖 **Telegram-бот:** @PEcb10_bot
-🌐 **Live Demo:** https://meeting-audit-bot.alex-n8n.site/admin
+🖥️ **Live Demo операторской панели:** https://meeting-audit-bot.alex-n8n.site/admin
 
 Полный скриншот-тур по системе: Telegram-контур пользователя, операторская панель
 `/admin`, execution-трейсы и security audit log.

@@ -75,6 +75,6 @@
 
 Deployment Validation **PASSED**: 26 шагов из 26 — PASS.
 
-Live-инстанс `https://meeting-audit-bot.alex-n8n.site` и Telegram-бот @PEcb10_bot работают в соответствии с `DEPLOYMENT_GUIDE.md`. Сквозной сценарий sales-call стабильно возвращает оценку **87,5%** (7 ✅, 1 ⚠️), Markdown-ответ рендерится корректно, аудит-лог и execution-трейсы сохраняются.
+Live-инстанс `https://meeting-audit-bot.alex-n8n.site/admin` (операторская панель) и Telegram-бот @PEcb10_bot работают в соответствии с `DEPLOYMENT_GUIDE.md`. Сквозной сценарий sales-call стабильно возвращает оценку **87,5%** (7 ✅, 1 ⚠️), Markdown-ответ рендерится корректно, аудит-лог и execution-трейсы сохраняются.
 
 > 📌 Рекомендуемое следующее действие перед публикацией: пройти `DEPLOYMENT_GUIDE.md` на **чистом VPS/VM** без существующего рабочего каталога проекта и получить независимый PASS, чтобы подтвердить воспроизводимость с нуля.
