@@ -107,19 +107,19 @@ title: Холодный звонок / продажи B2B
 сохраняются в `storage/prompts/` (gitignored, Docker volume), поэтому файлы в
 `prompts/v1/` служат fallback и эталоном для отката.
 
-- [onboarding](../prompts/v1/onboarding.md) — Онбординг нового сотрудника
+- [onboarding](/prompts/v1/onboarding.md) — Онбординг нового сотрудника
   
   Разбор встречи по передаче обязанностей и плану первых шагов.
 
-- [sales-call](../prompts/v1/sales-call.md) — Холодный звонок / продажи B2B
+- [sales-call](/prompts/v1/sales-call.md) — Холодный звонок / продажи B2B
   
   Аудит B2B-звонка по 8 критериям: квалификация, потребность, возражения, следующий шаг и др.
 
-- [online-lesson](../prompts/v1/online-lesson.md) — Разбор онлайн-урока
+- [online-lesson](/prompts/v1/online-lesson.md) — Разбор онлайн-урока
   
   Оценка структуры, понятности и фокуса на результат ученика.
 
-- [client-chat](../prompts/v1/client-chat.md) — Клиентский чат / сервис
+- [client-chat](/prompts/v1/client-chat.md) — Клиентский чат / сервис
   
   Разбор переписки менеджера с клиентом по стандарту сервиса.
 
