@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -133,12 +134,19 @@ class TelegramBot:
         upload_path: Path | None = None
         transcript_path: Path | None = None
         audit_path: Path | None = None
+        storage_filename: str | None = None
 
         try:
             self.execution.start_step(session_id, "download")
             tmp_dir_path = Path(tempfile.mkdtemp(prefix="tg_meeting_audit_"))
             upload_path = tmp_dir_path / media.filename
             await download_media(context.bot, media, upload_path)
+            # Сохраняем оригинал, загруженный из Telegram, в persistent-хранилище.
+            # filename остаётся человекочитаемым; storage_filename — уникальное имя файла на диске.
+            safe_name = Path(media.filename).name
+            storage_filename = f"{session_id}_{safe_name}"
+            storage_path = self.settings.storage_uploads_dir / storage_filename
+            shutil.copy(upload_path, storage_path)
             self.execution.finish_step(session_id, "download", status="ok", metadata={"size_bytes": upload_path.stat().st_size})
 
             self.execution.start_step(session_id, "transcribe")
@@ -161,6 +169,9 @@ class TelegramBot:
                     "model": model,
                     "prompt_id": prompt_id,
                     "chars": len(analysis),
+                    "tokens_in": analysis_result.get("tokens_in"),
+                    "tokens_out": analysis_result.get("tokens_out"),
+                    "tokens_total": analysis_result.get("tokens_total"),
                 }
             )
             status = "success"
@@ -179,8 +190,14 @@ class TelegramBot:
                 error_message=None,
                 provider=provider,
                 prompt_id=prompt_id,
+                mime_type=media.mime_type,
+                file_size=upload_path.stat().st_size,
+                duration=media.duration,
+                storage_filename=storage_filename,
             )
             self.execution.finish_step(session_id, "persist", status="ok", metadata={"audit_id": audit_record})
+            self.storage.update_execution_session_video_audit_id(session_id, audit_record)
+            self.storage.update_execution_session_storage_filename(session_id, storage_filename)
             self.execution.finish_session(session_id, status="success")
 
             await progress.edit_text("Анализ готов. Отправляю результат...")
@@ -200,7 +217,7 @@ class TelegramBot:
             except Exception:
                 pass
             try:
-                self.storage.save_audit(
+                audit_record = self.storage.save_audit(
                     chat_id=message.chat_id,
                     user_id=user_id,
                     username=username,
@@ -213,7 +230,21 @@ class TelegramBot:
                     error_message=error_message,
                     provider=analysis_result.get("provider") if analysis_result else None,
                     prompt_id=analysis_result.get("prompt_id") if analysis_result else None,
+                    mime_type=media.mime_type,
+                    file_size=upload_path.stat().st_size if upload_path else None,
+                    duration=media.duration,
+                    storage_filename=storage_filename,
                 )
+                if storage_filename:
+                    try:
+                        self.storage.update_execution_session_storage_filename(session_id, storage_filename)
+                    except Exception:
+                        pass
+                if audit_record:
+                    try:
+                        self.storage.update_execution_session_video_audit_id(session_id, audit_record)
+                    except Exception:
+                        pass
             except Exception:
                 logger.exception("Failed to save failed audit")
             await progress.edit_text(

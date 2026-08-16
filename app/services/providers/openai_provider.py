@@ -34,7 +34,7 @@ class OpenAIProvider(LLMProvider):
         model: str,
         temperature: float,
         max_tokens: int,
-    ) -> str:
+    ) -> dict[str, Any]:
         if OpenAI is None:
             raise RuntimeError("Python-пакет `openai` не установлен.")
         client = self._get_client()
@@ -51,14 +51,27 @@ class OpenAIProvider(LLMProvider):
         result = content.strip() if isinstance(content, str) else str(content).strip()
         if not result:
             raise RuntimeError("OpenAI returned empty analysis.")
-        return result
+        usage = None
+        try:
+            if response.usage:
+                usage = {
+                    "prompt_tokens": getattr(response.usage, "prompt_tokens", None),
+                    "completion_tokens": getattr(response.usage, "completion_tokens", None),
+                    "total_tokens": getattr(response.usage, "total_tokens", None),
+                }
+        except Exception:
+            pass
+        return {"content": result, "usage": usage}
 
     def test_connection(self) -> bool:
+        from app.core.runtime_config import RuntimeConfig
+
         try:
+            model = RuntimeConfig(self.settings).load().get("openai_model", "gpt-4.1-mini")
             self.chat_completion(
                 system_prompt="You are a test assistant.",
                 user_prompt="Say OK.",
-                model=self.settings.openai_model,
+                model=model,
                 temperature=0.0,
                 max_tokens=5,
             )

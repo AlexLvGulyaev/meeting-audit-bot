@@ -40,8 +40,18 @@ class StorageService:
                         status TEXT NOT NULL,
                         error_message TEXT NULL,
                         provider TEXT NULL,
-                        prompt_id TEXT NULL
+                        prompt_id TEXT NULL,
+                        mime_type TEXT NULL,
+                        file_size BIGINT NULL,
+                        duration INT NULL,
+                        storage_filename TEXT NULL
                     );
+                    """
+                )
+                cursor.execute(
+                    """
+                    ALTER TABLE video_audits
+                    ADD COLUMN IF NOT EXISTS storage_filename TEXT NULL;
                     """
                 )
                 cursor.execute(
@@ -68,8 +78,16 @@ class StorageService:
                         username TEXT NULL,
                         file_id TEXT NULL,
                         filename TEXT NULL,
-                        status TEXT NOT NULL
+                        storage_filename TEXT NULL,
+                        status TEXT NOT NULL,
+                        video_audit_id BIGINT NULL
                     );
+                    """
+                )
+                cursor.execute(
+                    """
+                    ALTER TABLE execution_sessions
+                    ADD COLUMN IF NOT EXISTS storage_filename TEXT NULL;
                     """
                 )
                 cursor.execute(
@@ -105,11 +123,24 @@ class StorageService:
                         id BIGSERIAL PRIMARY KEY,
                         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                         actor TEXT NOT NULL,
+                        user_id TEXT NULL,
+                        user_name TEXT NULL,
+                        user_role TEXT NULL,
+                        ip_address TEXT NULL,
                         action TEXT NOT NULL,
                         resource_type TEXT NOT NULL,
                         resource_id TEXT NULL,
                         details JSONB NULL
                     );
+                    """
+                )
+                cursor.execute(
+                    """
+                    ALTER TABLE admin_audit_log
+                    ADD COLUMN IF NOT EXISTS user_id TEXT NULL,
+                    ADD COLUMN IF NOT EXISTS user_name TEXT NULL,
+                    ADD COLUMN IF NOT EXISTS user_role TEXT NULL,
+                    ADD COLUMN IF NOT EXISTS ip_address TEXT NULL;
                     """
                 )
                 cursor.execute(
@@ -151,6 +182,10 @@ class StorageService:
         error_message: str | None,
         provider: str | None = None,
         prompt_id: str | None = None,
+        mime_type: str | None = None,
+        file_size: int | None = None,
+        duration: int | None = None,
+        storage_filename: str | None = None,
     ) -> int:
         with self._connect() as conn:
             with conn.cursor() as cursor:
@@ -159,15 +194,15 @@ class StorageService:
                     INSERT INTO video_audits (
                         chat_id, user_id, username, file_id, file_unique_id,
                         filename, transcript, analysis, status, error_message,
-                        provider, prompt_id
+                        provider, prompt_id, mime_type, file_size, duration, storage_filename
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id;
                     """,
                     (
                         chat_id, user_id, username, file_id, file_unique_id,
                         filename, transcript, analysis, status, error_message,
-                        provider, prompt_id,
+                        provider, prompt_id, mime_type, file_size, duration, storage_filename,
                     ),
                 )
                 row = cursor.fetchone()
@@ -227,16 +262,17 @@ class StorageService:
         username: str | None,
         file_id: str | None,
         filename: str | None,
+        storage_filename: str | None = None,
         status: str,
     ) -> None:
         with self._connect() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
-                    INSERT INTO execution_sessions (session_id, chat_id, user_id, username, file_id, filename, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s);
+                    INSERT INTO execution_sessions (session_id, chat_id, user_id, username, file_id, filename, storage_filename, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
                     """,
-                    (session_id, chat_id, user_id, username, file_id, filename, status),
+                    (session_id, chat_id, user_id, username, file_id, filename, storage_filename, status),
                 )
             conn.commit()
 
@@ -258,45 +294,64 @@ class StorageService:
         limit: int = 50,
         offset: int = 0,
         status: str | None = None,
+        period: str | None = None,
+        q: str | None = None,
     ) -> list[dict[str, Any]]:
+        conditions = []
+        params: list[Any] = []
+        if status:
+            conditions.append("status = %s")
+            params.append(status)
+        if period == "24h":
+            conditions.append("created_at >= NOW() - INTERVAL '24 hours'")
+        elif period == "7d":
+            conditions.append("created_at >= NOW() - INTERVAL '7 days'")
+        elif period == "30d":
+            conditions.append("created_at >= NOW() - INTERVAL '30 days'")
+        if q:
+            conditions.append("filename ILIKE %s")
+            params.append(f"%{q}%")
+        where = "WHERE " + " AND ".join(conditions) if conditions else ""
+        query = f"""
+            SELECT session_id, chat_id, user_id, username, file_id, filename, storage_filename,
+                   status, created_at, updated_at, video_audit_id
+            FROM execution_sessions
+            {where}
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s;
+        """
+        params.extend([limit, offset])
         with self._connect() as conn:
             with conn.cursor() as cursor:
-                if status:
-                    cursor.execute(
-                        """
-                        SELECT session_id, chat_id, user_id, username, file_id, filename,
-                               status, created_at, updated_at
-                        FROM execution_sessions
-                        WHERE status = %s
-                        ORDER BY created_at DESC
-                        LIMIT %s OFFSET %s;
-                        """,
-                        (status, limit, offset),
-                    )
-                else:
-                    cursor.execute(
-                        """
-                        SELECT session_id, chat_id, user_id, username, file_id, filename,
-                               status, created_at, updated_at
-                        FROM execution_sessions
-                        ORDER BY created_at DESC
-                        LIMIT %s OFFSET %s;
-                        """,
-                        (limit, offset),
-                    )
+                cursor.execute(query, params)
                 columns = [desc[0] for desc in cursor.description]
                 return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
-    def count_execution_sessions(self, status: str | None = None) -> int:
+    def count_execution_sessions(
+        self,
+        status: str | None = None,
+        period: str | None = None,
+        q: str | None = None,
+    ) -> int:
+        conditions = []
+        params: list[Any] = []
+        if status:
+            conditions.append("status = %s")
+            params.append(status)
+        if period == "24h":
+            conditions.append("created_at >= NOW() - INTERVAL '24 hours'")
+        elif period == "7d":
+            conditions.append("created_at >= NOW() - INTERVAL '7 days'")
+        elif period == "30d":
+            conditions.append("created_at >= NOW() - INTERVAL '30 days'")
+        if q:
+            conditions.append("filename ILIKE %s")
+            params.append(f"%{q}%")
+        where = "WHERE " + " AND ".join(conditions) if conditions else ""
+        query = f"SELECT COUNT(*) FROM execution_sessions {where};"
         with self._connect() as conn:
             with conn.cursor() as cursor:
-                if status:
-                    cursor.execute(
-                        "SELECT COUNT(*) FROM execution_sessions WHERE status = %s;",
-                        (status,),
-                    )
-                else:
-                    cursor.execute("SELECT COUNT(*) FROM execution_sessions;")
+                cursor.execute(query, params)
                 row = cursor.fetchone()
                 return row[0] if row else 0
 
@@ -305,12 +360,61 @@ class StorageService:
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
-                    SELECT session_id, chat_id, user_id, username, file_id, filename,
-                           status, created_at, updated_at
+                    SELECT session_id, chat_id, user_id, username, file_id, filename, storage_filename,
+                           status, created_at, updated_at, video_audit_id
                     FROM execution_sessions
                     WHERE session_id = %s;
                     """,
                     (session_id,),
+                )
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                columns = [desc[0] for desc in cursor.description]
+                return dict(zip(columns, row))
+
+    def update_execution_session_video_audit_id(
+        self, session_id: str, video_audit_id: int
+    ) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE execution_sessions
+                    SET video_audit_id = %s, updated_at = NOW()
+                    WHERE session_id = %s;
+                    """,
+                    (video_audit_id, session_id),
+                )
+            conn.commit()
+
+    def update_execution_session_storage_filename(
+        self, session_id: str, storage_filename: str
+    ) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE execution_sessions
+                    SET storage_filename = %s, updated_at = NOW()
+                    WHERE session_id = %s;
+                    """,
+                    (storage_filename, session_id),
+                )
+            conn.commit()
+
+    def get_video_audit(self, video_audit_id: int) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, created_at, chat_id, user_id, username, file_id,
+                           file_unique_id, filename, transcript, analysis, status,
+                           error_message, provider, prompt_id, mime_type, file_size, duration, storage_filename
+                    FROM video_audits
+                    WHERE id = %s;
+                    """,
+                    (video_audit_id,),
                 )
                 row = cursor.fetchone()
                 if not row:
@@ -383,6 +487,10 @@ class StorageService:
         action: str,
         resource_type: str,
         resource_id: str | None = None,
+        user_id: str | None = None,
+        user_name: str | None = None,
+        user_role: str | None = None,
+        ip_address: str | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
         import json
@@ -391,27 +499,114 @@ class StorageService:
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
-                    INSERT INTO admin_audit_log (actor, action, resource_type, resource_id, details)
-                    VALUES (%s, %s, %s, %s, %s);
+                    INSERT INTO admin_audit_log (
+                        actor, user_id, user_name, user_role, ip_address,
+                        action, resource_type, resource_id, details
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
                     """,
-                    (actor, action, resource_type, resource_id, json.dumps(details or {})),
+                    (
+                        actor, user_id, user_name, user_role, ip_address,
+                        action, resource_type, resource_id, json.dumps(details or {}),
+                    ),
                 )
             conn.commit()
 
-    def list_admin_audit(self, limit: int = 100) -> list[dict[str, Any]]:
+    def list_admin_audit(
+        self,
+        limit: int = 100,
+        offset: int = 0,
+        period: str | None = None,
+        action: str | None = None,
+        resource_type: str | None = None,
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        conditions = []
+        params: list[Any] = []
+        if period == "24h":
+            conditions.append("created_at >= NOW() - INTERVAL '24 hours'")
+        elif period == "7d":
+            conditions.append("created_at >= NOW() - INTERVAL '7 days'")
+        elif period == "30d":
+            conditions.append("created_at >= NOW() - INTERVAL '30 days'")
+        if action:
+            conditions.append("action = %s")
+            params.append(action)
+        if resource_type:
+            conditions.append("resource_type = %s")
+            params.append(resource_type)
+        if user_id:
+            conditions.append("(actor ILIKE %s OR user_id ILIKE %s OR user_name ILIKE %s OR resource_id ILIKE %s)")
+            params.append(f"%{user_id}%")
+            params.append(f"%{user_id}%")
+            params.append(f"%{user_id}%")
+            params.append(f"%{user_id}%")
+        where = "WHERE " + " AND ".join(conditions) if conditions else ""
+        query = f"""
+            SELECT id, created_at, actor, user_id, user_name, user_role, ip_address,
+                   action, resource_type, resource_id, details
+            FROM admin_audit_log
+            {where}
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s;
+        """
+        params.extend([limit, offset])
+        with self._connect() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query, params)
+                columns = [desc[0] for desc in cursor.description]
+                return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    def count_admin_audit(
+        self,
+        period: str | None = None,
+        action: str | None = None,
+        resource_type: str | None = None,
+        user_id: str | None = None,
+    ) -> int:
+        conditions = []
+        params: list[Any] = []
+        if period == "24h":
+            conditions.append("created_at >= NOW() - INTERVAL '24 hours'")
+        elif period == "7d":
+            conditions.append("created_at >= NOW() - INTERVAL '7 days'")
+        elif period == "30d":
+            conditions.append("created_at >= NOW() - INTERVAL '30 days'")
+        if action:
+            conditions.append("action = %s")
+            params.append(action)
+        if resource_type:
+            conditions.append("resource_type = %s")
+            params.append(resource_type)
+        if user_id:
+            conditions.append("(actor ILIKE %s OR user_id ILIKE %s OR user_name ILIKE %s OR resource_id ILIKE %s)")
+            params.append(f"%{user_id}%")
+            params.append(f"%{user_id}%")
+            params.append(f"%{user_id}%")
+            params.append(f"%{user_id}%")
+        where = "WHERE " + " AND ".join(conditions) if conditions else ""
+        query = f"SELECT COUNT(*) FROM admin_audit_log {where};"
+        with self._connect() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query, params)
+                row = cursor.fetchone()
+                return row[0] if row else 0
+
+    def list_admin_audit_actions(self) -> list[str]:
         with self._connect() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    """
-                    SELECT id, created_at, actor, action, resource_type, resource_id, details
-                    FROM admin_audit_log
-                    ORDER BY created_at DESC
-                    LIMIT %s;
-                    """,
-                    (limit,),
+                    "SELECT DISTINCT action FROM admin_audit_log ORDER BY action;"
                 )
-                columns = [desc[0] for desc in cursor.description]
-                return [dict(zip(columns, row)) for row in cursor.fetchall()]
+                return [row[0] for row in cursor.fetchall() if row[0]]
+
+    def list_admin_audit_resource_types(self) -> list[str]:
+        with self._connect() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT DISTINCT resource_type FROM admin_audit_log ORDER BY resource_type;"
+                )
+                return [row[0] for row in cursor.fetchall() if row[0]]
 
     def health_check(self) -> bool:
         try:

@@ -43,7 +43,7 @@ class GigaChatProvider(LLMProvider):
         model: str,
         temperature: float,
         max_tokens: int,
-    ) -> str:
+    ) -> dict[str, Any]:
         adapter = self._get_adapter()
         response = adapter.chat_completions(
             model=model,
@@ -57,14 +57,20 @@ class GigaChatProvider(LLMProvider):
         content = response.get("content", "")
         if not content:
             raise RuntimeError("GigaChat returned empty analysis.")
-        return content.strip()
+        return {
+            "content": content.strip(),
+            "usage": response.get("usage"),
+        }
 
     def test_connection(self) -> bool:
+        from app.core.runtime_config import RuntimeConfig
+
         try:
+            model = RuntimeConfig(self.settings).load().get("gigachat_model", "GigaChat")
             self.chat_completion(
                 system_prompt="You are a test assistant.",
                 user_prompt="Say OK.",
-                model=self.settings.gigachat_model,
+                model=model,
                 temperature=0.0,
                 max_tokens=5,
             )

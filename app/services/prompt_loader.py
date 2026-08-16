@@ -9,12 +9,13 @@ from app.core.config import BASE_DIR, Settings
 logger = logging.getLogger(__name__)
 
 REQUIRED_BLOCKS = {
-    "role",
-    "task_objective",
-    "internal_criteria",
-    "audit_process",
-    "core_instructions",
-    "constraints_and_negations",
+    "Роль",
+    "Задача",
+    "Критерии оценки",
+    "Процесс аудита",
+    "Инструкции по выводу",
+    "Ограничения",
+    "Формат ответа",
 }
 
 
@@ -67,11 +68,11 @@ class PromptLoader:
         found: set[str] = set()
         missing: list[str] = []
         for block in REQUIRED_BLOCKS:
-            pattern = rf"<{re.escape(block)}\b"
-            if re.search(pattern, content, flags=re.IGNORECASE):
+            pattern = rf"^##\s+{re.escape(block)}\s*$"
+            if re.search(pattern, content, flags=re.IGNORECASE | re.MULTILINE):
                 found.add(block)
             else:
-                missing.append(f"<{block}>")
+                missing.append(f"## {block}")
         return len(missing) == 0, missing
 
     def base_exists(self, prompt_id: str) -> bool:

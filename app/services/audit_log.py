@@ -25,6 +25,10 @@ class AuditLogService:
         action: str,
         resource_type: str,
         resource_id: str | None = None,
+        user_id: str | None = None,
+        user_name: str | None = None,
+        user_role: str | None = None,
+        ip_address: str | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
         try:
@@ -33,6 +37,10 @@ class AuditLogService:
                 action=action,
                 resource_type=resource_type,
                 resource_id=resource_id,
+                user_id=user_id,
+                user_name=user_name,
+                user_role=user_role,
+                ip_address=ip_address,
                 details=details,
             )
         except Exception:

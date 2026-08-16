@@ -4,7 +4,8 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from telegram import Update
 from telegram.ext import Application
 
@@ -53,7 +54,10 @@ async def _start_telegram_polling(app: FastAPI) -> None:
     telegram_app = bot.build_application()
     await telegram_app.initialize()
     await telegram_app.start()
-    await telegram_app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+    await telegram_app.updater.start_polling(
+        allowed_updates=Update.ALL_TYPES,
+        drop_pending_updates=True,
+    )
     app.state.telegram_app = telegram_app
     app.state.telegram_bot = bot
     logger.info("Telegram polling started")
@@ -99,6 +103,15 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(admin.router)
+
+    @app.exception_handler(HTTPException)
+    async def _http_exception_handler(request: Request, exc: HTTPException):
+        # Admin auth guard uses 303 + path in detail; convert back to a real redirect.
+        if exc.status_code == 303 and isinstance(exc.detail, str) and exc.detail.startswith("/"):
+            return RedirectResponse(url=exc.detail, status_code=303)
+        # Fall back to default JSON rendering for all other HTTP exceptions.
+        from fastapi.exception_handlers import http_exception_handler
+        return await http_exception_handler(request, exc)
 
     return app
 

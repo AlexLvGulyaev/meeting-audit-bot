@@ -24,6 +24,7 @@ class ExecutionService:
         username: str | None,
         file_id: str | None,
         filename: str | None,
+        storage_filename: str | None = None,
     ) -> str:
         session_id = str(uuid.uuid4())
         self.storage.insert_execution_session(
@@ -33,6 +34,7 @@ class ExecutionService:
             username=username,
             file_id=file_id,
             filename=filename,
+            storage_filename=storage_filename,
             status="running",
         )
         return session_id
@@ -65,8 +67,12 @@ class ExecutionService:
         limit: int = 50,
         offset: int = 0,
         status: str | None = None,
+        period: str | None = None,
+        q: str | None = None,
     ) -> list[dict[str, Any]]:
-        return self.storage.list_execution_sessions(limit=limit, offset=offset, status=status)
+        return self.storage.list_execution_sessions(
+            limit=limit, offset=offset, status=status, period=period, q=q
+        )
 
     def get_session(self, session_id: str) -> dict[str, Any] | None:
         session = self.storage.get_execution_session(session_id)
@@ -75,4 +81,6 @@ class ExecutionService:
         steps = self.storage.get_execution_steps(session_id)
         result = dict(session)
         result["steps"] = [dict(row) for row in steps]
+        if session.get("video_audit_id"):
+            result["video_audit"] = self.storage.get_video_audit(session["video_audit_id"])
         return result

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import logging
 from pathlib import Path
@@ -21,6 +22,27 @@ class RuntimeConfig:
         self.settings.storage_dir.mkdir(parents=True, exist_ok=True)
         (self.settings.storage_dir / "prompts").mkdir(parents=True, exist_ok=True)
 
+    @staticmethod
+    def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+        """Recursively merge override into base."""
+        result = copy.deepcopy(base)
+        for key, value in override.items():
+            if isinstance(value, dict) and key in result and isinstance(result[key], dict):
+                result[key] = RuntimeConfig._deep_merge(result[key], value)
+            else:
+                result[key] = copy.deepcopy(value)
+        return result
+
+    @staticmethod
+    def _migrate_config(config: dict[str, Any]) -> dict[str, Any]:
+        """Remove stale top-level keys that are no longer part of DEFAULT_CONFIG."""
+        allowed = set(DEFAULT_CONFIG.keys())
+        for key in list(config.keys()):
+            if key not in allowed:
+                logger.info("Removing stale runtime config key %r", key)
+                del config[key]
+        return config
+
     def load(self) -> dict[str, Any]:
         self._ensure_storage()
         if self._config is not None:
@@ -36,7 +58,7 @@ class RuntimeConfig:
         else:
             loaded = {}
 
-        merged = {**DEFAULT_CONFIG, **loaded}
+        merged = self._migrate_config(self._deep_merge(DEFAULT_CONFIG, loaded))
         self._config = merged
         self.save(merged)
         return merged

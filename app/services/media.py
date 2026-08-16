@@ -18,6 +18,8 @@ class MediaFile:
     file_id: str
     file_unique_id: str
     filename: str
+    mime_type: str
+    duration: int | None
 
 
 def _safe_name(name: str) -> str:
@@ -33,6 +35,8 @@ def extract_media_file_data(message: Message) -> Optional[MediaFile]:
             file_id=message.video.file_id,
             file_unique_id=message.video.file_unique_id,
             filename=filename,
+            mime_type=mime,
+            duration=message.video.duration,
         )
 
     if message.document and (message.document.mime_type or "").startswith("video/"):
@@ -46,6 +50,8 @@ def extract_media_file_data(message: Message) -> Optional[MediaFile]:
             file_id=message.document.file_id,
             file_unique_id=message.document.file_unique_id,
             filename=filename,
+            mime_type=message.document.mime_type or "video/mp4",
+            duration=None,
         )
 
     if message.audio:
@@ -58,6 +64,8 @@ def extract_media_file_data(message: Message) -> Optional[MediaFile]:
             file_id=message.audio.file_id,
             file_unique_id=message.audio.file_unique_id,
             filename=filename,
+            mime_type=mime,
+            duration=message.audio.duration,
         )
 
     if message.document and (message.document.mime_type or "").startswith("audio/"):
@@ -71,6 +79,28 @@ def extract_media_file_data(message: Message) -> Optional[MediaFile]:
             file_id=message.document.file_id,
             file_unique_id=message.document.file_unique_id,
             filename=filename,
+            mime_type=message.document.mime_type or "audio/mpeg",
+            duration=None,
+        )
+
+    if message.video_note:
+        filename = f"{message.video_note.file_unique_id}.mp4"
+        return MediaFile(
+            file_id=message.video_note.file_id,
+            file_unique_id=message.video_note.file_unique_id,
+            filename=filename,
+            mime_type="video/mp4",
+            duration=message.video_note.duration,
+        )
+
+    if message.voice:
+        filename = f"{message.voice.file_unique_id}.ogg"
+        return MediaFile(
+            file_id=message.voice.file_id,
+            file_unique_id=message.voice.file_unique_id,
+            filename=filename,
+            mime_type="audio/ogg",
+            duration=message.voice.duration,
         )
 
     return None

@@ -13,7 +13,8 @@ class LLMProvider(ABC):
         model: str,
         temperature: float,
         max_tokens: int,
-    ) -> str:
+    ) -> dict[str, Any]:
+        """Return a dict with at least 'content' (str) and optionally 'usage' dict."""
         ...
 
     @abstractmethod

@@ -1,54 +1,372 @@
-{% extends "base.html" %}
-{% block title %}Executions — Meeting Audit Bot{% endblock %}
+{% extends "admin_base.html" %}
+
+{% block title %}Логи · Админка{% endblock %}
+{% block page_title %}Логи{% endblock %}
+{% block page_subtitle %}Операционная консоль: сессии обработки файлов и этапы пайплайна{% endblock %}
+
+{% block page_actions %}
+  <a class="ai-btn ai-btn--secondary ai-btn--small" href="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">↻ Обновить</a>
+{% endblock %}
+
 {% block content %}
-<h1>Execution sessions ({{ total }})</h1>
 
-<form method="get" action="/admin/executions" style="margin-bottom:1rem">
-  <label class="muted">Filter by status:</label>
-  <select name="status_filter" onchange="this.form.submit()">
-    <option value="" {% if not status_filter %}selected{% endif %}>All</option>
-    <option value="success" {% if status_filter == 'success' %}selected{% endif %}>success</option>
-    <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>failed</option>
-    <option value="running" {% if status_filter == 'running' %}selected{% endif %}>running</option>
-  </select>
-</form>
+{# query-параметры без offset/selected — для ссылок карточек и пагинатора. #}
+{% set pairs = [] %}
+{% for k, v in request.query_params.multi_items() if k not in ('offset', 'selected') %}
+  {% set _ = pairs.append((k, v)) %}
+{% endfor %}
+{% set fqs = pairs | urlencode %}
 
-<div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>Session ID</th>
-        <th>User</th>
-        <th>Filename</th>
-        <th>Status</th>
-        <th>Created</th>
-        <th>Updated</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for session in sessions %}
-      <tr>
-        <td><a href="/admin/executions/{{ session.session_id }}">{{ session.session_id[:8] }}</a></td>
-        <td>{{ session.username or session.user_id or "—" }}</td>
-        <td>{{ session.filename or "—" }}</td>
-        <td><span class="badge badge-{{ session.status }}">{{ session.status }}</span></td>
-        <td>{{ session.created_at }}</td>
-        <td>{{ session.updated_at }}</td>
-      </tr>
+{# ── Макросы ───────────────────────────────────────────────────────────── #}
+{% macro status_badge(status_val) -%}
+<span class="ai-status {% if status_val == 'success' %}ai-status--ok{% elif status_val == 'failed' %}ai-status--error{% elif status_val == 'running' %}ai-status--warning{% else %}ai-status--muted{% endif %}">
+  {% if status_val == 'success' %}успешно{% elif status_val == 'failed' %}ошибка{% elif status_val == 'running' %}в процессе{% else %}{{ status_val or '—' }}{% endif %}
+</span>
+{%- endmacro %}
+
+{% macro step_status_badge(status_val) -%}
+<span class="ai-status {% if status_val == 'ok' %}ai-status--ok{% elif status_val == 'failed' %}ai-status--error{% elif status_val == 'running' %}ai-status--warning{% else %}ai-status--muted{% endif %}">
+  {% if status_val == 'ok' %}ok{% elif status_val == 'failed' %}error{% elif status_val == 'running' %}running{% else %}{{ status_val or '—' }}{% endif %}</span>
+{%- endmacro %}
+
+{% macro stage_label(name) -%}
+{% if name == 'download' %}Загрузка файла{% elif name == 'transcribe' %}Транскрибация{% elif name in ('analyze', 'audit') %}Анализ LLM{% elif name == 'notify' %}Ответ пользователю{% elif name == 'persist' %}Сохранение аудита{% else %}{{ name }}{% endif %}
+{%- endmacro %}
+
+{# Макрос правой панели деталей для ОДНОЙ сессии. #}
+{% macro detail_panel(s) -%}
+  {% set steps = s.get('steps') or [] %}
+  {% set audit = s.get('video_audit') or {} %}
+  {% if audit is none %}{% set audit = {} %}{% endif %}
+
+  <div class="ai-detail-head">
+    <h2 class="ai-section__title">ДЕТАЛИЗАЦИЯ СЕССИИ #{{ s.get('row_number') or '—' }}</h2>
+    <div>{{ status_badge(s.get('status')) }}</div>
+  </div>
+
+  <div class="ai-grid ai-grid--2" style="margin-bottom:12px;">
+    <div class="ai-section-box">
+      <h4 class="ai-section-box__title">Параметры запроса</h4>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Имя файла</span><span class="ai-compact-row__value">{{ audit.get('filename') or s.get('filename') or '—' }}</span></div>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Пользователь</span><span class="ai-compact-row__value">{% if s.get('username') %}@{{ s.get('username') }}{% else %}{{ s.get('user_id') or '—' }}{% endif %}</span></div>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">MIME-тип</span><span class="ai-compact-row__value">{{ audit.get('mime_type') or '—' }}</span></div>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Размер файла</span><span class="ai-compact-row__value">{% if audit.get('file_size') is not none %}{{ (audit['file_size'] / 1024) | round(2) }} KB{% else %}—{% endif %}</span></div>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Длительность</span><span class="ai-compact-row__value">{% if audit.get('duration') is not none %}{{ audit['duration'] }} с{% else %}—{% endif %}</span></div>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Время создания</span><span class="ai-compact-row__value">{{ s.get('created_at') | dtformat('%Y-%m-%d %H:%M:%S') if s.get('created_at') else '—' }}</span></div>
+    </div>
+    <div class="ai-section-box">
+      <h4 class="ai-section-box__title">Параметры исполнения</h4>
+      {% set audit_step = steps | selectattr('name', 'equalto', 'audit') | first %}
+      {% set audit_meta = audit_step.get('metadata') or {} if audit_step else {} %}
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Провайдер</span><span class="ai-compact-row__value">{{ audit.get('provider') or '—' }}</span></div>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Модель</span><span class="ai-compact-row__value ai-compact-row__value--mono">{{ audit_meta.get('model') or audit.get('model') or '—' }}</span></div>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Prompt ID</span><span class="ai-compact-row__value ai-compact-row__value--mono">{{ audit.get('prompt_id') or '—' }}</span></div>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Токены</span><span class="ai-compact-row__value">{% if audit_meta.get('tokens_total') is not none %}{{ audit_meta['tokens_total'] }}{% elif audit_meta.get('tokens_in') is not none or audit_meta.get('tokens_out') is not none %}{{ audit_meta.get('tokens_in', 0) }} / {{ audit_meta.get('tokens_out', 0) }}{% else %}—{% endif %}</span></div>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Символов в ответе</span><span class="ai-compact-row__value">{% if audit_meta.get('chars') is not none %}{{ audit_meta['chars'] }}{% elif audit.get('analysis') %}{{ audit['analysis'] | length }}{% else %}—{% endif %}</span></div>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Время обработки</span><span class="ai-compact-row__value">{% if s.get('processing_duration_seconds') is not none %}{{ s['processing_duration_seconds'] }} с{% else %}—{% endif %}</span></div>
+    </div>
+  </div>
+
+  <div class="ai-grid ai-grid--2 ai-grid--fill" style="margin-bottom:10px; flex:1 1 auto; min-height:0;">
+    <div class="ai-section-box ai-section-box--content">
+      <div class="ai-section-box__header">
+        <h4 class="ai-section-box__title">Запрос пользователя</h4>
+        {% if audit.get('transcript') %}
+        <button type="button" class="ai-expand-btn" data-modal-target="modal-transcript-{{ s.get('session_id') }}">Развернуть</button>
+        {% endif %}
+      </div>
+      {% set audio_file = s.get('storage_filename') or s.get('filename') %}
+      {% if audio_file %}
+      <audio controls style="width:100%;margin-bottom:6px;">
+        <source src="/admin/uploads/{{ audio_file }}" type="{{ audit.get('mime_type') or 'audio/mpeg' }}">
+        Ваш браузер не поддерживает аудио.
+      </audio>
+      <div style="font-size:0.72rem;color:var(--ai-text-muted);margin-bottom:6px;">
+        <a href="/admin/uploads/{{ audio_file }}" target="_blank" download>⬇ Скачать аудио</a> · {{ s.get('filename') or audio_file }}
+      </div>
       {% else %}
-      <tr><td colspan="6" class="muted">No sessions</td></tr>
+      <div class="ai-empty" style="padding:8px;">Аудиофайл не сохранён.</div>
+      {% endif %}
+      {% if audit.get('transcript') %}
+      <pre class="ai-biz-text ai-biz-text--fixed-14" id="transcript-{{ s.get('session_id') }}">{{ audit['transcript'] }}</pre>
+      {% else %}
+      <div class="ai-empty ai-biz-text--fixed-14">Транскрипт отсутствует.</div>
+      {% endif %}
+    </div>
+    <div class="ai-section-box ai-section-box--content">
+      <div class="ai-section-box__header">
+        <h4 class="ai-section-box__title">Ответ системы</h4>
+        {% if audit.get('analysis') %}
+        <button type="button" class="ai-expand-btn" data-modal-target="modal-analysis-{{ s.get('session_id') }}">Развернуть</button>
+        {% endif %}
+      </div>
+      {% if audit.get('analysis') %}
+      <div class="ai-biz-text ai-biz-text--fixed-14" id="analysis-{{ s.get('session_id') }}">{{ audit['analysis'] | strip_markdown_fence }}</div>
+      {% else %}
+      <div class="ai-empty ai-biz-text--fixed-14">Анализ отсутствует.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Модальные окна для полного просмотра транскрипта и анализа. #}
+  {% if audit.get('transcript') %}
+  <div class="ai-modal" id="modal-transcript-{{ s.get('session_id') }}" role="dialog" aria-hidden="true">
+    <div class="ai-modal__overlay"></div>
+    <div class="ai-modal__content">
+      <div class="ai-modal__header">
+        <h4 class="ai-modal__title">Запрос пользователя — полный текст</h4>
+        <button type="button" class="ai-modal__close" aria-label="Закрыть">×</button>
+      </div>
+      <pre class="ai-biz-text">{{ audit['transcript'] }}</pre>
+    </div>
+  </div>
+  {% endif %}
+  {% if audit.get('analysis') %}
+  <div class="ai-modal" id="modal-analysis-{{ s.get('session_id') }}" role="dialog" aria-hidden="true">
+    <div class="ai-modal__overlay"></div>
+    <div class="ai-modal__content">
+      <div class="ai-modal__header">
+        <h4 class="ai-modal__title">Ответ системы — полный текст</h4>
+        <button type="button" class="ai-modal__close" aria-label="Закрыть">×</button>
+      </div>
+      <pre class="ai-biz-text">{{ audit['analysis'] | strip_markdown_fence }}</pre>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="ai-section-box ai-section-box--timeline" style="margin-bottom:10px;">
+    <h4 class="ai-section-box__title">Таймлайн пайплайна</h4>
+    {% if steps %}
+    <div class="ai-pipeline">
+      <div class="ai-pipeline__step">
+        <div class="ai-pipeline__step-head">
+          <span class="ai-step__time">{{ s.get('created_at') | dtformat('%Y-%m-%d %H:%M:%S') if s.get('created_at') else '—' }}</span>
+          <span class="ai-status ai-status--muted">получен</span>
+          <span class="ai-step__name">Получен файл</span>
+          <span class="ai-step__dur">—</span>
+        </div>
+      </div>
+      {% for step in steps %}
+      <div class="ai-pipeline__step">
+        <div class="ai-pipeline__step-head">
+          <span class="ai-step__time">{{ step.get('created_at') | dtformat('%Y-%m-%d %H:%M:%S') if step.get('created_at') else '—' }}</span>
+          {{ step_status_badge(step.get('status')) }}
+          <span class="ai-step__name">{{ stage_label(step.get('name')) }}</span>
+          <span class="ai-step__dur">{% if step.get('updated_at') and step.get('created_at') %}{{ ((step['updated_at'] - step['created_at']).total_seconds()) | round(2) }}s{% else %}—{% endif %}</span>
+        </div>
+        {% if step.get('metadata') %}
+        <div class="ai-pipeline__step-body">
+          <details><summary>JSON payload</summary><pre class="ai-pre">{{ _json_dumps(step.get('metadata')) }}</pre></details>
+        </div>
+        {% endif %}
+      </div>
       {% endfor %}
-    </tbody>
-  </table>
+    </div>
+    {% else %}
+    <div class="ai-empty">Шаги не записаны (сессия не закрыта или упала до finish).</div>
+    {% endif %}
+  </div>
+
+  {% set snap = {
+    "session_id": s.get('session_id'),
+    "chat_id": s.get('chat_id'),
+    "user_id": s.get('user_id'),
+    "username": s.get('username'),
+    "file_id": s.get('file_id'),
+    "filename": s.get('filename'),
+    "status": s.get('status'),
+    "created_at": s.get('created_at').isoformat() if s.get('created_at') else None,
+    "updated_at": s.get('updated_at').isoformat() if s.get('updated_at') else None,
+    "steps": steps,
+    "video_audit": audit,
+  } %}
+  <details class="ai-json-collapse">
+    <summary><span class="ai-tooltip">Технический снимок (JSON)<span class="ai-tooltip__text">Полный технический снимок сессии обработки.</span></span></summary>
+    <pre class="ai-pre">{{ _json_dumps(snap) }}</pre>
+  </details>
+{%- endmacro %}
+
+<div class="ai-master-detail ai-master-detail--fill">
+
+  {# ── Левая панель: фильтры + пагинация + список ──────────────────────────── #}
+  <aside class="ai-list-panel ai-card">
+    <form method="get" action="/admin/executions" class="ai-log-filters">
+      <div class="ai-filter-row">
+        <select class="ai-select" name="period" onchange="this.form.submit()">
+          <option value="" {{ 'selected' if not filters.period }}>период: все</option>
+          <option value="24h" {{ 'selected' if filters.period == '24h' }}>24ч</option>
+          <option value="7d" {{ 'selected' if filters.period == '7d' }}>7д</option>
+          <option value="30d" {{ 'selected' if filters.period == '30d' }}>30д</option>
+        </select>
+        <select class="ai-select" name="status" onchange="this.form.submit()">
+          <option value="" {{ 'selected' if not filters.status }}>статус: любой</option>
+          <option value="success" {{ 'selected' if filters.status == 'success' }}>успешно</option>
+          <option value="failed" {{ 'selected' if filters.status == 'failed' }}>ошибка</option>
+          <option value="running" {{ 'selected' if filters.status == 'running' }}>в процессе</option>
+        </select>
+      </div>
+      <input class="ai-input ai-search" type="text" name="q" value="{{ filters.q or '' }}" placeholder="Поиск по имени файла..." onkeydown="if(event.key==='Enter'){event.preventDefault();this.form.submit();}">
+    </form>
+
+    <div class="ai-list-panel__pager">
+      {% if offset > 0 %}
+        <a class="ai-btn ai-btn--secondary ai-btn--small" href="?{{ fqs }}{% if fqs %}&{% endif %}offset={{ [0, offset - limit] | max }}{% if selected_id %}&selected={{ selected_id }}{% endif %}">← Назад</a>
+      {% else %}
+        <span class="ai-btn ai-btn--secondary ai-btn--small" style="opacity:0.4;pointer-events:none;">← Назад</span>
+      {% endif %}
+      <span class="ai-pager__info">Стр. {{ (offset // limit) + 1 }} из {{ ((total + limit - 1) // limit) if total else 1 }}</span>
+      {% if offset + limit < total %}
+        <a class="ai-btn ai-btn--secondary ai-btn--small" href="?{{ fqs }}{% if fqs %}&{% endif %}offset={{ offset + limit }}{% if selected_id %}&selected={{ selected_id }}{% endif %}">Вперёд →</a>
+      {% else %}
+        <span class="ai-btn ai-btn--secondary ai-btn--small" style="opacity:0.4;pointer-events:none;">Вперёд →</span>
+      {% endif %}
+    </div>
+
+    <div class="ai-list-panel__count">
+      <span>Всего {{ total }}</span>
+      <a href="/admin/executions" style="color:var(--ai-primary);font-size:0.72rem;">Сброс</a>
+    </div>
+
+    <div class="ai-list-panel__scroll">
+      {% for s in sessions %}
+      <a class="ai-log-card {{ 'ai-log-card--active' if selected_id == s.session_id }}" data-id="{{ s.session_id }}" href="?{{ fqs }}{% if fqs %}&{% endif %}offset={{ offset }}&selected={{ s.session_id }}">
+        <div class="ai-log-card__head">
+          <span class="muted">{{ s.created_at| dtformat('%Y-%m-%d %H:%M:%S') if s.created_at else '—' }}</span>
+          {{ status_badge(s.status) }}
+        </div>
+        <div class="ai-log-card__title">{{ s.filename or 'Сессия #' ~ s.session_id[:8] }}</div>
+        <div class="ai-log-card__meta">
+          <span>#{{ s.get('row_number') or '—' }}</span>
+          <span>·</span>
+          <span>{{ s.get('display_user') or '—' }}</span>
+          <span>·</span>
+          <span>{{ s.get('display_file_size') or '—' }}</span>
+          <span>·</span>
+          <span>{{ s.get('display_duration') or '—' }}</span>
+        </div>
+      </a>
+      {% else %}
+      <div class="ai-empty">Трейсов нет. Отправьте аудио/видео боту — создастся сессия обработки.</div>
+      {% endfor %}
+    </div>
+  </aside>
+
+  {# ── Правая панель: pre-render деталей всех сессий страницы ──────────────── #}
+  {% if sessions %}
+  <div class="ai-detail-panel-wrap" style="flex:1;min-width:0;height:100%;overflow:hidden;display:flex;flex-direction:column;">
+    {% for s in sessions %}
+    <section id="ai-detail-{{ s.session_id }}" class="ai-card ai-detail-panel" style="display:{{ 'flex' if selected_id == s.session_id else 'none' }}">
+      {{ detail_panel(s) }}
+    </section>
+    {% endfor %}
+  </div>
+  {% else %}
+  <section class="ai-card ai-detail-panel"><div class="ai-empty">Выберите запись для просмотра деталей.</div></section>
+  {% endif %}
+
 </div>
 
-<div class="pagination">
-  {% if page > 1 %}
-    <a href="/admin/executions?page={{ page - 1 }}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}">← Prev</a>
-  {% endif %}
-  <span class="muted">Page {{ page }} of {{ page_count }}</span>
-  {% if page < page_count %}
-    <a href="/admin/executions?page={{ page + 1 }}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}">Next →</a>
-  {% endif %}
-</div>
+{# ── Навигация: клик/стрелки ↑↓ перебирают айтемы без перезагрузки ───────── #}
+{% if sessions %}
+<script>
+(function(){
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.ai-log-card[data-id]'));
+  var ids = cards.map(function(c){ return c.getAttribute('data-id'); });
+  function panelEl(id){ return document.getElementById('ai-detail-' + id); }
+  function selectId(id, opts){
+    opts = opts || {};
+    cards.forEach(function(c){
+      c.classList.toggle('ai-log-card--active', c.getAttribute('data-id') === id);
+    });
+    ids.forEach(function(i){ var el = panelEl(i); if(el) el.style.display = (i === id) ? 'flex' : 'none'; });
+    if(!opts.skipHistory){
+      var p = new URLSearchParams(window.location.search);
+      p.set('selected', id);
+      history.pushState({selected:id}, '', '?' + p.toString());
+    }
+    var card = cards[ids.indexOf(id)];
+    if(card){
+      if(opts.scrollIntoView) card.scrollIntoView({block:'nearest'});
+      if(opts.focus) card.focus({preventScroll:true});
+    }
+  }
+  cards.forEach(function(c){
+    c.setAttribute('tabindex', '0');
+    c.addEventListener('click', function(e){
+      e.preventDefault();
+      selectId(c.getAttribute('data-id'), {scrollIntoView:true});
+    });
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    var t = e.target;
+    if(t && (t.closest('input') || t.closest('textarea') || t.closest('select') || t.isContentEditable)) return;
+    var curId = null;
+    ids.forEach(function(i){ if(panelEl(i) && panelEl(i).style.display !== 'none') curId = i; });
+    var idx = curId ? ids.indexOf(curId) : 0;
+    if(idx < 0) return;
+    if(e.key === 'ArrowDown'){
+      if(idx + 1 < ids.length){ e.preventDefault(); selectId(ids[idx+1], {scrollIntoView:true}); }
+      else if({{ offset }} + {{ limit }} < {{ total }}){ e.preventDefault(); changePage({{ offset }} + {{ limit }}); }
+      return;
+    }
+    if(e.key === 'ArrowUp'){
+      if(idx > 0){ e.preventDefault(); selectId(ids[idx-1], {scrollIntoView:true}); }
+      else if({{ offset }} > 0){ e.preventDefault(); changePage(Math.max(0, {{ offset }} - {{ limit }})); }
+    }
+  });
+  function changePage(newOffset){
+    var p = new URLSearchParams(window.location.search);
+    p.set('offset', newOffset);
+    p.delete('selected');
+    window.location.href = '?' + p.toString();
+  }
+  window.addEventListener('popstate', function(){
+    var p = new URLSearchParams(window.location.search);
+    var id = p.get('selected');
+    if(id && ids.indexOf(id) >= 0) selectId(id, {skipHistory:true});
+  });
+  // Автофокус на первую запись при входе в консоль.
+  if(ids.length > 0){
+    var initialId = ids[0];
+    var selectedFromUrl = new URLSearchParams(window.location.search).get('selected');
+    if(selectedFromUrl && ids.indexOf(selectedFromUrl) >= 0) initialId = selectedFromUrl;
+    selectId(initialId, {skipHistory:true, focus:true});
+  }
+
+  // Модальные окна "Развернуть".
+  function openModal(el){
+    el.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    var closeBtn = el.querySelector('.ai-modal__close');
+    if(closeBtn) closeBtn.focus();
+  }
+  function closeModal(el){
+    el.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+  document.querySelectorAll('.ai-expand-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      var targetId = btn.getAttribute('data-modal-target');
+      var modal = targetId ? document.getElementById(targetId) : null;
+      if(modal) openModal(modal);
+    });
+  });
+  document.querySelectorAll('.ai-modal__close, .ai-modal__overlay').forEach(function(el){
+    el.addEventListener('click', function(e){
+      e.preventDefault();
+      var modal = el.closest('.ai-modal');
+      if(modal) closeModal(modal);
+    });
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Escape') return;
+    document.querySelectorAll('.ai-modal[aria-hidden="false"]').forEach(function(modal){ closeModal(modal); });
+  });
+})();
+</script>
+{% endif %}
+
 {% endblock %}

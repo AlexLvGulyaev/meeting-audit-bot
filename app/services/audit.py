@@ -33,8 +33,9 @@ class AuditService:
         prompt_id = config.get("prompt_id", "onboarding")
         provider_id = config.get("active_provider", "openai")
         fallback_id = config.get("fallback_provider")
-        temperature = float(config.get("temperature", 0.1))
-        max_tokens = int(config.get("max_tokens", 2048))
+        provider_cfg = config.get("providers", {}).get(provider_id, {})
+        temperature = float(provider_cfg.get("temperature", 0.1))
+        max_tokens = int(provider_cfg.get("max_tokens", 2048))
 
         audit_prompt = self.prompt_loader.load_prompt(prompt_id)
         model = self._resolve_model(provider_id, config)
@@ -49,18 +50,23 @@ class AuditService:
 
         try:
             provider = get_provider(provider_id, self.settings)
-            analysis = provider.chat_completion(
+            provider_response = provider.chat_completion(
                 system_prompt=SYSTEM_PROMPT,
                 user_prompt=user_prompt,
                 model=model,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+            analysis = provider_response["content"]
+            usage = provider_response.get("usage")
             return {
                 "analysis": analysis,
                 "provider": provider_id,
                 "prompt_id": prompt_id,
                 "model": model,
+                "tokens_in": usage.get("prompt_tokens") if usage else None,
+                "tokens_out": usage.get("completion_tokens") if usage else None,
+                "tokens_total": usage.get("total_tokens") if usage else None,
             }
         except Exception as exc:
             logger.warning("Primary provider %s failed: %s", provider_id, exc)
@@ -68,18 +74,24 @@ class AuditService:
                 try:
                     fallback_model = self._resolve_model(fallback_id, config)
                     provider = get_provider(fallback_id, self.settings)
-                    analysis = provider.chat_completion(
+                    fallback_cfg = config.get("providers", {}).get(fallback_id, {})
+                    provider_response = provider.chat_completion(
                         system_prompt=SYSTEM_PROMPT,
                         user_prompt=user_prompt,
                         model=fallback_model,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
+                        temperature=float(fallback_cfg.get("temperature", 0.1)),
+                        max_tokens=int(fallback_cfg.get("max_tokens", 2048)),
                     )
+                    analysis = provider_response["content"]
+                    usage = provider_response.get("usage")
                     return {
                         "analysis": analysis,
                         "provider": fallback_id,
                         "prompt_id": prompt_id,
                         "model": fallback_model,
+                        "tokens_in": usage.get("prompt_tokens") if usage else None,
+                        "tokens_out": usage.get("completion_tokens") if usage else None,
+                        "tokens_total": usage.get("total_tokens") if usage else None,
                     }
                 except Exception as fb_exc:
                     logger.warning("Fallback provider %s failed: %s", fallback_id, fb_exc)
@@ -88,6 +100,9 @@ class AuditService:
                 "provider": "fallback_static",
                 "prompt_id": prompt_id,
                 "model": None,
+                "tokens_in": None,
+                "tokens_out": None,
+                "tokens_total": None,
             }
 
     def _resolve_model(self, provider_id: str, config: dict[str, Any]) -> str:
