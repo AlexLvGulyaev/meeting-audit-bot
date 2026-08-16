@@ -17,9 +17,11 @@ from telegram.ext import (
 )
 
 from app.core.config import Settings
+from app.core.runtime_config import RuntimeConfig
 from app.services.audit import AuditService
 from app.services.execution import ExecutionService
 from app.services.media import extract_media_file_data, download_media
+from app.services.prompt_loader import PromptLoader
 from app.services.storage import StorageService
 
 logger = logging.getLogger(__name__)
@@ -77,23 +79,55 @@ class TelegramBot:
         )
         return app
 
+    def _available_scenarios_text(self) -> str:
+        """Возвращает markdown-описание доступных сценариев и активного промпта."""
+        try:
+            runtime_cfg = RuntimeConfig(self.settings).load()
+            active_prompt_id = runtime_cfg.get("prompt_id", "onboarding")
+            loader = PromptLoader(self.settings)
+            prompts = loader.list_prompts()
+        except Exception:
+            return ""
+
+        lines: list[str] = []
+        lines.append("*Доступные сценарии аудита:*")
+        for prompt in prompts:
+            marker = "✅" if prompt["id"] == active_prompt_id else "•"
+            lines.append(f"{marker} *{prompt['name']}* — `/{prompt['id']}`")
+        lines.append("")
+        lines.append(f"*Сейчас активен:* `{active_prompt_id}`")
+        lines.append("Администратор может сменить сценарий в /admin.")
+        return "\n".join(lines)
+
     async def start_handler(self, update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
         if not update.message:
             return
-        await update.message.reply_text(
-            "Отправьте видео или mp3-файл.\n"
-            "Я сделаю транскрипт через AssemblyAI и проверю диалог по активному промпту."
+        scenarios = self._available_scenarios_text()
+        text = (
+            "Привет! Я аудитор встреч и звонков.\n\n"
+            "Отправьте видео или mp3-файл, и я сделаю транскрипт через AssemblyAI "
+            "с разделением по спикерам, затем проверю диалог по активному сценарию.\n\n"
         )
+        if scenarios:
+            text += scenarios
+        await update.message.reply_text(text, parse_mode="Markdown")
 
     async def help_handler(self, update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
         if not update.message:
             return
-        await update.message.reply_text(
-            "Как использовать:\n"
+        scenarios = self._available_scenarios_text()
+        text = (
+            "*Как использовать:*\n"
             "1) Отправьте видео или mp3.\n"
             "2) Дождитесь транскрибации и анализа.\n"
-            "3) Получите готовый аудит в чате."
+            "3) Получите готовый аудит в чате.\n\n"
+            "*Поддерживаемые форматы:* mp3, mp4, ogg, wav, m4a и другие, которые Telegram распознаёт как аудио/видео.\n\n"
         )
+        if scenarios:
+            text += scenarios
+        else:
+            text += "Список сценариев временно недоступен."
+        await update.message.reply_text(text, parse_mode="Markdown")
 
     async def handle_media(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if not update.message:
@@ -259,4 +293,7 @@ class TelegramBot:
     async def handle_unsupported(self, update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
         if not update.message:
             return
-        await update.message.reply_text("Отправьте видео или mp3, чтобы я запустил анализ.")
+        await update.message.reply_text(
+            "Отправьте видео или mp3, чтобы я запустил анализ. "
+            "Список сценариев и активный промпт — в /help или /start."
+        )

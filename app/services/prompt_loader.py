@@ -29,6 +29,22 @@ class PromptLoader:
     def _custom_dir(self) -> Path:
         return self.settings.storage_dir / "prompts"
 
+    @staticmethod
+    def _read_title(path: Path) -> str | None:
+        """Читает первую строку title: ... из markdown-файла промпта."""
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    if stripped.lower().startswith("title:"):
+                        return stripped[6:].strip()
+                    break
+        except Exception:
+            pass
+        return None
+
     def list_prompts(self) -> list[dict[str, str]]:
         prompts: list[dict[str, str]] = []
         seen: set[str] = set()
@@ -41,11 +57,13 @@ class PromptLoader:
                     continue
                 seen.add(prompt_id)
                 is_custom = directory == self._custom_dir()
+                title = self._read_title(path)
+                display_name = title or prompt_id.replace("-", " ").title()
                 prompts.append(
                     {
                         "id": prompt_id,
-                        "name": prompt_id.replace("-", " ").title(),
-                        "title": prompt_id.replace("-", " ").title(),
+                        "name": display_name,
+                        "title": display_name,
                         "editable": str(is_custom),
                         "source": "custom" if is_custom else "base",
                         "path": str(path.relative_to(BASE_DIR)),
