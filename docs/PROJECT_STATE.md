@@ -2,8 +2,8 @@
 
 **Проект:** meeting-audit-bot
 **Дата создания:** 2026-08-15
-**Последнее обновление:** 2026-08-16
-**Статус:** ✅ Портфельный актив. Реализован, прошёл Deployment Validation, опубликован как публичный репозиторий с живым демо.
+**Последнее обновление:** 2026-08-30
+**Статус:** ✅ Портфельный актив. Реализован, опубликован как публичный репозиторий с живым демо; Deployment Validation пройдена в чистом окружении (30.08); TLS-проверка GigaChat включена из коробки (бандл Минцифры).
 
 ---
 
@@ -48,7 +48,9 @@ Telegram-бот для аудита встреч, звонков и уроков
 - [x] Централизованная очистка markdown-обёртки `strip_markdown_fence` для Telegram и админки.
 - [x] Реалистичный двухголосый B2B-диалог для E2E (`examples/sample-b2b-sales-call-retail.md`).
 - [x] E2E-сценарии и скриншоты (14 штук), каталог `docs/MEDIA_INDEX.md`.
-- [x] Deployment Validation в чистом окружении.
+- [x] Deployment Verification на живом инстансе (15.08, 26/26 PASS).
+- [x] **Deployment Validation в чистом окружении (30.08)** — изолированный Docker Host (dind), свежий клон публичного репозитория, только публичный гайд; PASS (см. `DEPLOYMENT_VALIDATION_REPORT.md`).
+- [x] **GigaChat CA-bundle (30.08)** — бандл Минцифры в репо, compose-дефолт `GIGACHAT_CA_BUNDLE`, TLS-проверка включена из коробки; верифицировано на проде и в чистом окружении.
 - [x] Публикация публичного репозитория и живого демо.
 
 ### 🟡 Возможное развитие (за границей v1.0)
@@ -85,7 +87,7 @@ Telegram-бот для аудита встреч, звонков и уроков
 | Стоимость STT + LLM на больших объёмах | Средняя | Среднее | Дневной лимит, выбор модели, кэширование |
 | Диаризация AssemblyAI путает спикеров | Низкая | Среднее | Явные маркеры спикеров в промпте; fallback на текст без деления |
 | Публичный Telegram-бот = абуз лимитов | Высокое для демо | Среднее | ✅ Дневной лимит 5/сутки; exempt `ADMIN_USER_ID` |
-| GigaChat TLS (`ssl.CERT_NONE` dev) | Низкое | Низкое | `GIGACHAT_CA_BUNDLE` на production |
+| GigaChat TLS (`ssl.CERT_NONE` dev) | Низкое | Низкое | ✅ 30.08: `certs/russian_trusted_ca_bundle.pem` в репо + compose-дефолт `GIGACHAT_CA_BUNDLE` — проверка включена из коробки |
 
 ---
 
@@ -173,6 +175,7 @@ Telegram-бот для аудита встреч, звонков и уроков
 | 2026-08-16 | E2E и скриншоты | 14 сценариев, реалистичный B2B-аудио, MEDIA_INDEX |
 | 2026-08-16 | Документация APL | README, PROJECT_STATE, SPEC, ARCHITECTURE, DEPLOYMENT_GUIDE и др. |
 | 2026-08-16 | Сопроводительные материалы | pecb10-homework.md + cover-letter |
+| 2026-08-30 | GigaChat CA-bundle + чистая Validation | Долг по TLS закрыт: бандл Минцифры в `certs/`, compose-дефолт `GIGACHAT_CA_BUNDLE`, production-чеклист §7 в гайде; прод пересоздан, реальный вызов GigaChat с `using CA bundle`. Чистая Validation (dind + публичный клон): PASS — build/health/polling/LLM/RBAC/GigaChat TLS; замечание по secure-cookie в §6.1 добавлено в гайд. Отчёт заменён на версию PASS (чистое окружение) |
 
 ---
 
