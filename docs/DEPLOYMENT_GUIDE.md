@@ -50,7 +50,7 @@ cp .env.example .env
 | `GIGACHAT_BASE_URL` | нет | Базовый URL GigaChat API (по умолчанию `https://gigachat.devices.sberbank.ru/api/v1`) |
 | `GIGACHAT_TOKEN_URL` | нет | URL OAuth-обмена GigaChat (по умолчанию `https://ngw.devices.sberbank.ru:9443/api/v2/oauth`) |
 | `GIGACHAT_SCOPE` | нет | OAuth-scope GigaChat (по умолчанию `GIGACHAT_API_PERS`) |
-| `GIGACHAT_CA_BUNDLE` | нет | Путь к CA-bundle Минцифры; пусто — проверка сертификата отключена (dev/demo); на production укажите путь |
+| `GIGACHAT_CA_BUNDLE` | нет | CA-bundle Минцифры для проверки TLS GigaChat. **Пусто — используется бандл из репозитория** (`certs/russian_trusted_ca_bundle.pem`, подключён в compose по умолчанию); отключение проверки (не рекомендуется) — указать несуществующий путь |
 | `DATABASE_URL` | да | PostgreSQL connection string. Внутри compose: `postgresql://meeting_audit:meeting_audit@postgres:5432/meeting_audit` |
 | `POSTGRES_USER` | нет | Пользователь БД (по умолчанию `meeting_audit`) |
 | `POSTGRES_PASSWORD` | нет | Пароль БД (по умолчанию `meeting_audit`) |
@@ -195,7 +195,17 @@ curl http://localhost:8000/health
 
 ---
 
-## 🔄 7. Обновление
+## 🔒 7. Production-чеклист
+
+- **TLS / публичный домен:** обратный прокси терминирует TLS (см. §4.1); `/admin` — только через HTTPS.
+- **Секреты:** уникальные `ADMIN_TOKEN` / `ADMIN_DEMO_TOKEN` (не демо-значения из `.env.example`).
+- **GigaChat TLS:** проверка сертификата включена из коробки — compose монтирует `certs/russian_trusted_ca_bundle.pem` (Russian Trusted Root CA и Russian Trusted Sub CA; источник gu-st.ru) и подставляет путь в `GIGACHAT_CA_BUNDLE` автоматически (см. таблицу §2.2). Отпечатки SHA-256 для сверки: Root CA `D2:6D:2D:02:31:B7:C3:9F:92:CC:73:85:12:BA:54:10:35:19:E4:40:5D:68:B5:BD:70:3E:97:88:CA:8E:CF:31`, Sub CA `BB:BD:E2:10:3E:79:0B:99:9E:C6:2B:D0:3C:F6:25:A5:A2:E7:C3:16:E1:0A:FE:6A:49:0E:ED:EA:D8:B3:FD:9B`. Не отключайте проверку на production.
+- **Дневной лимит:** на публичном инстансе держите дневной лимит обработок (5/пользователь, exempt `ADMIN_USER_ID`) — защита от абузу LLM-токенов.
+- **БД:** резервное копирование volume `postgres_data`.
+
+---
+
+## 🔄 8. Обновление
 
 ```bash
 git pull
@@ -206,7 +216,7 @@ Runtime-конфиг (`storage/config.json`) и custom-промпты (`storage/
 
 ---
 
-## 🧹 8. Очистка
+## 🧹 9. Очистка
 
 ```bash
 # Остановить сервисы, сохранив данные

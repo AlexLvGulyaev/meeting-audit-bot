@@ -25,8 +25,12 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://meeting_audit:meeting_audit@postgres:5432/meeting_audit}
       STORAGE_DIR: ${STORAGE_DIR:-/app/storage}
+      # MinTsifry CA bundle for GigaChat TLS verification (enabled by default;
+      # to disable, set GIGACHAT_CA_BUNDLE in .env to a non-existent path)
+      GIGACHAT_CA_BUNDLE: ${GIGACHAT_CA_BUNDLE:-/certs/russian_trusted_ca_bundle.pem}
     volumes:
       - meeting_audit_storage:/app/storage
+      - ./certs/russian_trusted_ca_bundle.pem:/certs/russian_trusted_ca_bundle.pem:ro
     depends_on:
       postgres:
         condition: service_healthy
