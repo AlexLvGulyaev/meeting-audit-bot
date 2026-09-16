@@ -568,6 +568,19 @@ async def audit_page(
     )
 
 
+@router.get("/legend", response_class=HTMLResponse)
+async def legend_page(
+    request: Request,
+    identity: AdminIdentity = Depends(admin_auth),
+) -> Response:
+    """Обозначения консоли (канон RF/AIC/RAR). Read-only — без мутаций;
+    доступна и в демо-режиме."""
+    return templates.TemplateResponse(
+        "admin/legend.html",
+        {"request": request, "is_demo": identity.is_demo},
+    )
+
+
 def _flash_url(provider_id: str, ok: bool, message: str) -> str:
     from urllib.parse import urlencode
 

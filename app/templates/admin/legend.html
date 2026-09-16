@@ -1,0 +1,111 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Обозначения · Админка{% endblock %}
+{% block page_title %}Обозначения{% endblock %}
+{% block page_subtitle %}Что означают статусы, состояния и роли в консоли — и что за каждым из них делает система.{% endblock %}
+
+{% block content %}
+<style>
+  /* Канон RF/AIC/RAR: карточки-секции, строка = чип (фикс. ширина) →
+     пояснение. Три секции — один верхний ряд (решение владельца из
+     RAR-задачи). */
+  .legend-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  @media (min-width: 720px) {
+    .legend-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1100px) {
+    .legend-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .legend-card {
+    background-color: var(--ai-surface);
+    border: 1px solid var(--ai-border);
+    border-radius: var(--ai-radius);
+    padding: 14px;
+    min-height: 290px;
+  }
+  .legend-card h3 {
+    font-family: var(--ai-font-display);
+    font-size: 0.95rem;
+    margin: 0 0 10px;
+  }
+  .legend-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 4px 0;
+  }
+  .legend-row__chip { flex-shrink: 0; min-width: 118px; }
+  .legend-row__chip .ai-status { display: inline-block; }
+  .legend-row__note { min-width: 0; flex: 1; font-size: 0.8125rem; color: var(--ai-text-muted); line-height: 1.4; }
+</style>
+
+<div class="legend-grid">
+  <section class="legend-card">
+    <h3>Статус обработки · Сессии</h3>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--ok">✔︎</span></span>
+      <span class="legend-row__note">сессия дошла до конца: транскрибация и анализ завершены, аудит сохранён и отправлен пользователю</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--error">❌</span></span>
+      <span class="legend-row__note">сессия прервана на одном из шагов (загрузка, транскрибация, анализ, сохранение) — место сбоя и причина видны в таймлайне сессии</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--warning">🔄</span></span>
+      <span class="legend-row__note">файл принят и ещё обрабатывается; итог сменится на галку или ошибку по завершении</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--muted">➖</span></span>
+      <span class="legend-row__note">статус не записан — сессия создана, но воркер упал до первой отметки шага</span>
+    </div>
+  </section>
+
+  <section class="legend-card">
+    <h3>Состояние системы</h3>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--ok">🟢 Норма</span></span>
+      <span class="legend-row__note">компонент работает: проба соединения прошла (PostgreSQL — SELECT 1, API — /health), бот настроен и запущен</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--warning">🟠 Деградация</span></span>
+      <span class="legend-row__note">часть компонентов недоступна — обработка файлов может идти через fallback или не работать вовсе</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--error">❌ Ошибка</span></span>
+      <span class="legend-row__note">компонент неработоспособен — например, база недоступна: бот и админка не работают</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--warning">⚠️</span></span>
+      <span class="legend-row__note">ключ API не задан — вызов завершится fallback-провайдером или статическим ответом</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--muted">🚫 выключен</span></span>
+      <span class="legend-row__note">компонент отключён конфигурацией — Telegram-бот без токена: входящие сообщения не обрабатываются</span>
+    </div>
+  </section>
+
+  <section class="legend-card">
+    <h3>Роли пользователей</h3>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--ok">🛡️ админ</span></span>
+      <span class="legend-row__note">полный доступ по токену оператора: конфигурация, провайдеры, промпт; все мутации в журнале аудита идут с этой ролью</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--muted">🎭 демо</span></span>
+      <span class="legend-row__note">сессия только для просмотра по демо-входу; изменения заблокированы на бэкенде, а не только скрыты в интерфейсе</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--ok">👤 пользователь</span></span>
+      <span class="legend-row__note">действия в Telegram-боте: отправил файл на анализ (telegram.file_received), исчерпал дневной лимит (telegram.quota_exceeded), прислал не медиа (telegram.unsupported_content) — основа анализа аудитории</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-row__chip"><span class="ai-status ai-status--emoji ai-status--error">🚫 без роли</span></span>
+      <span class="legend-row__note">события без авторизации: неудачные попытки входа и отказы по правам — в аудите роль у них пустая</span>
+    </div>
+  </section>
+</div>
+{% endblock %}

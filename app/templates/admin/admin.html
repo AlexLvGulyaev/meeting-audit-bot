@@ -24,9 +24,9 @@
       <div class="ai-section__subtitle">Живые пробы компонентов и метрики из БД. Read-only.</div>
     </div>
     {% if status_postgres and status_api %}
-      <span class="ai-status ai-status--ok">overall · ok</span>
+      <span class="ai-status ai-status--emoji ai-status--ok" title="Состояние системы: все компоненты работают">🟢 Норма</span>
     {% else %}
-      <span class="ai-status ai-status--warning">overall · degraded</span>
+      <span class="ai-status ai-status--emoji ai-status--warning" title="Состояние системы: часть компонентов недоступна">🟠 Деградация</span>
     {% endif %}
   </div>
 
@@ -35,14 +35,14 @@
     <div class="ai-metric">
       <div class="ai-metric__label"><span class="ai-tooltip">PostgreSQL<span class="ai-tooltip__text">БД проекта: аудиты, execution-трейсы, журнал админ-действий. Проба SELECT 1. error — бот и админка неработоспособны.</span></span></div>
       <div class="ai-metric__value">
-        {% if status_postgres %}<span class="ai-status ai-status--ok">ok</span>{% else %}<span class="ai-status ai-status--error">error</span>{% endif %}
+        {% if status_postgres %}<span class="ai-status ai-status--emoji ai-status--ok" title="HEALTH: проба SELECT 1 прошла">🟢 Норма</span>{% else %}<span class="ai-status ai-status--emoji ai-status--error" title="HEALTH: база недоступна — бот и админка неработоспособны">❌ Ошибка</span>{% endif %}
       </div>
       <div class="ai-metric__note">база данных · хранилище</div>
     </div>
     <div class="ai-metric">
       <div class="ai-metric__label"><span class="ai-tooltip">Telegram-бот<span class="ai-tooltip__text">Polling-бот, принимающий голосовые/видео сообщения. «настроен» — задан TELEGRAM_BOT_TOKEN и бот запущен; без него входящие сообщения не обрабатываются.</span></span></div>
       <div class="ai-metric__value">
-        {% if status_telegram %}<span class="ai-status ai-status--ok">настроен</span>{% else %}<span class="ai-status ai-status--muted">выключен</span>{% endif %}
+        {% if status_telegram %}<span class="ai-status ai-status--emoji ai-status--ok" title="HEALTH: бот настроен и запущен">🟢 настроен</span>{% else %}<span class="ai-status ai-status--emoji ai-status--muted" title="HEALTH: токен не задан — входящие не обрабатываются">🚫 выключен</span>{% endif %}
       </div>
       <div class="ai-metric__note">{% if status_telegram_username %}@{{ status_telegram_username }}{% else %}уведомления и приём файлов{% endif %}</div>
     </div>
@@ -50,16 +50,16 @@
       <div class="ai-metric__label"><span class="ai-tooltip">LLM-провайдер<span class="ai-tooltip__text">Активный LLM-провайдер (из config.json). «готов» — ключ задан и проверка связи прошла; «нет ключа» — сработает fallback-провайдер или статический ответ.</span></span></div>
       <div class="ai-metric__value">
         {% if status_provider %}
-          <span class="ai-status ai-status--ok">{{ config.active_provider }} · ключ задан</span>
+          <span class="ai-status ai-status--emoji ai-status--ok" title="HEALTH: ключ задан и проверка связи прошла">🟢 {{ config.active_provider }} · ключ задан</span>
         {% else %}
-          <span class="ai-status ai-status--warning">{{ config.active_provider }} · нет ключа</span>
+          <span class="ai-status ai-status--emoji ai-status--warning" title="HEALTH: ключа нет — сработает fallback или статический ответ">⚠️ {{ config.active_provider }} · нет ключа</span>
         {% endif %}
       </div>
       <div class="ai-metric__note">активный · применяется в runtime</div>
     </div>
     <div class="ai-metric">
       <div class="ai-metric__label"><span class="ai-tooltip">API (сайт)<span class="ai-tooltip__text">HTTP API (FastAPI): /health, /admin. Принимает файлы, отдаёт статусы и управляет конфигурацией.</span></span></div>
-      <div class="ai-metric__value"><span class="ai-status ai-status--ok">ok</span></div>
+      <div class="ai-metric__value"><span class="ai-status ai-status--emoji ai-status--ok" title="HEALTH: /health и /admin отвечают">🟢 Норма</span></div>
       <div class="ai-metric__note">/health · /admin отвечают</div>
     </div>
   </div>

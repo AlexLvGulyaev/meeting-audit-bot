@@ -19,6 +19,7 @@ from telegram.ext import (
 from app.core.config import Settings
 from app.core.runtime_config import RuntimeConfig
 from app.services.audit import AuditService
+from app.services.audit_log import AuditLogService
 from app.services.execution import ExecutionService
 from app.services.media import extract_media_file_data, download_media
 from app.services.prompt_loader import PromptLoader
@@ -37,11 +38,40 @@ class TelegramBot:
         storage: StorageService | None = None,
         audit: AuditService | None = None,
         execution: ExecutionService | None = None,
+        audit_log: AuditLogService | None = None,
     ) -> None:
         self.settings = settings or Settings.from_env()
         self.storage = storage or StorageService(self.settings)
         self.audit = audit or AuditService(self.settings)
         self.execution = execution or ExecutionService(self.settings)
+        self.audit_log = audit_log or AuditLogService(self.settings)
+
+    def _log_user_action(
+        self,
+        *,
+        action: str,
+        resource_type: str,
+        resource_id: str | None = None,
+        user_id: int | None = None,
+        username: str | None = None,
+        details: dict | None = None,
+    ) -> None:
+        """Действие пользователя Telegram в журнале аудита (роль «user»).
+
+        Без персональных данных в details (текст и имя файла не пишутся);
+        user_id/username — в штатные колонки журнала (эти же поля уже
+        хранятся в execution_sessions)."""
+        self.audit_log.log(
+            actor="telegram",
+            action=action,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            user_id=str(user_id) if user_id is not None else None,
+            user_name=username,
+            user_role="user",
+            ip_address=None,
+            details=details,
+        )
 
     def _split_for_telegram(self, text: str) -> list[str]:
         if len(text) <= MESSAGE_CHUNK_SIZE:
@@ -144,6 +174,14 @@ class TelegramBot:
         if user_id != self.settings.admin_user_id:
             used = self.storage.count_uploads_today(user_id)
             if used >= MAX_UPLOADS_PER_DAY:
+                self._log_user_action(
+                    action="telegram.quota_exceeded",
+                    resource_type="telegram_user",
+                    resource_id=str(user_id) if user_id is not None else None,
+                    user_id=user_id,
+                    username=username,
+                    details={"limit": MAX_UPLOADS_PER_DAY, "used_today": used},
+                )
                 await message.reply_text(
                     f"Лимит обработок на сегодня исчерпан ({MAX_UPLOADS_PER_DAY}). "
                     "Попробуйте завтра."
@@ -159,6 +197,18 @@ class TelegramBot:
             username=username,
             file_id=media.file_id,
             filename=media.filename,
+        )
+        self._log_user_action(
+            action="telegram.file_received",
+            resource_type="execution_session",
+            resource_id=session_id,
+            user_id=user_id,
+            username=username,
+            details={
+                "mime_type": media.mime_type,
+                "duration": media.duration,
+                "file_unique_id": media.file_unique_id,
+            },
         )
 
         transcript: str | None = None
@@ -293,6 +343,17 @@ class TelegramBot:
     async def handle_unsupported(self, update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
         if not update.message:
             return
+        message = update.message
+        self._log_user_action(
+            action="telegram.unsupported_content",
+            resource_type="telegram_message",
+            user_id=message.from_user.id if message.from_user else None,
+            username=message.from_user.username if message.from_user else None,
+            details={
+                "chat_type": message.chat.type,
+                "has_attachment": message.effective_attachment is not None,
+            },
+        )
         await update.message.reply_text(
             "Отправьте видео или mp3, чтобы я запустил анализ. "
             "Список сценариев и активный промпт — в /help или /start."

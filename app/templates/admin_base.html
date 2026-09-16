@@ -4,6 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Админка · Meeting Audit Bot{% endblock %}</title>
+  <script>
+    /* Тема применяется до отрисовки (без вспышки): ключ `ai-theme` общий
+       с RF/AIC/RAR. Нет записи — системная по умолчанию (тёмная земля). */
+    (function () {
+      try {
+        var t = localStorage.getItem('ai-theme');
+        if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      } catch (e) { /* приватный режим — остаётся тёмная */ }
+    })();
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap');
 
@@ -31,6 +41,48 @@
       --ai-font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       --ai-sidebar-width: 260px;
     }
+
+    /* День/ночь — светлый override по RF-схеме: белая земля, голубые панели,
+       те же имена --ai-* (владелец: админки = RF-схема; ключ `ai-theme`
+       общий с RF/AIC/RAR). */
+    :root[data-theme='light'] {
+      --ai-bg: #ffffff;
+      --ai-surface: #e7ebf3;
+      --ai-surface-hover: #dfe5ef;
+      --ai-surface-elevated: #eef1f8;
+      --ai-input: #f4f6fa;
+      --ai-text: #16202f;
+      --ai-text-secondary: #33415a;
+      --ai-text-muted: #5a6880;
+      --ai-primary: #2563eb;
+      --ai-primary-hover: #1d4ed8;
+      --ai-primary-light: rgba(37, 99, 235, 0.12);
+      --ai-teal: #0d9488;
+      --ai-success: #15803d;
+      --ai-error: #dc2626;
+      --ai-warning: #b45309;
+      --ai-border: #97a5bd;
+      --ai-border-subtle: #c3ccdc;
+      --ai-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+    }
+    :root[data-theme='light'] .ai-status--ok,
+    :root[data-theme='light'] .ai-sidebar__badge--admin,
+    :root[data-theme='light'] .ai-badge--admin { background-color: rgba(21, 128, 61, 0.10); }
+    :root[data-theme='light'] .ai-status--error { background-color: rgba(220, 38, 38, 0.10); }
+    :root[data-theme='light'] .ai-status--warning,
+    :root[data-theme='light'] .ai-sidebar__badge--demo,
+    :root[data-theme='light'] .ai-badge--demo { background-color: rgba(180, 83, 9, 0.10); }
+    :root[data-theme='light'] .ai-status--muted { background-color: rgba(90, 104, 128, 0.10); }
+    :root[data-theme='light'] .ai-metric,
+    :root[data-theme='light'] .ai-provider-card,
+    :root[data-theme='light'] .ai-pipeline__step { background-color: rgba(15, 23, 42, 0.03); }
+    :root[data-theme='light'] code { background: rgba(15, 23, 42, 0.06); }
+    :root[data-theme='light'] .ai-pre,
+    :root[data-theme='light'] .ai-biz-text { background: rgba(15, 23, 42, 0.05); }
+    :root[data-theme='light'] .ai-chip.ok { border-color: rgba(21, 128, 61, 0.35); }
+    :root[data-theme='light'] .ai-chip.error { border-color: rgba(220, 38, 38, 0.35); }
+    :root[data-theme='light'] .ai-chip.skipped { border-color: rgba(90, 104, 128, 0.35); }
+    :root[data-theme='light'] .ai-nav__link--active { color: #ffffff; }
 
     * { box-sizing: border-box; }
 
@@ -208,6 +260,10 @@
       text-transform: uppercase; letter-spacing: 0.02em;
     }
     .ai-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background-color: currentColor; }
+    /* Контрактный чип-значок: эмодзи вместо точки (::before) — канон
+       chipContract (AIC), класс ai-status--emoji. Урок RAR: класс навешивать
+       на ВСЕ значковые чипы, проверять сканом. */
+    .ai-status--emoji::before { display: none; }
     .ai-status--ok { background-color: rgba(34,197,94,0.12); color: var(--ai-success); }
     .ai-status--error { background-color: rgba(239,68,68,0.12); color: var(--ai-error); }
     .ai-status--warning { background-color: rgba(245,158,11,0.12); color: var(--ai-warning); }
@@ -473,8 +529,9 @@
       {% endif %}
 
       <nav class="ai-nav">
+        {# Меню-канон APL (shared/patterns/admin-menu-canon.md) #}
         <div class="ai-nav__group">
-          <span class="ai-nav__group-label">Системные настройки</span>
+          <span class="ai-nav__group-label">Система</span>
           <div class="ai-nav__items">
             <a class="ai-nav__link {{ 'ai-nav__link--active' if request.path == '/admin' }}" href="/admin">
               <span class="ai-nav__icon">⚙️</span> Конфигурация
@@ -482,7 +539,7 @@
           </div>
         </div>
         <div class="ai-nav__group">
-          <span class="ai-nav__group-label">Операционная консоль</span>
+          <span class="ai-nav__group-label">Наблюдаемость</span>
           <div class="ai-nav__items">
             <a class="ai-nav__link {{ 'ai-nav__link--active' if request.path.startswith('/admin/executions') }}" href="/admin/executions">
               <span class="ai-nav__icon">📜</span> Сессии
@@ -492,9 +549,21 @@
             </a>
           </div>
         </div>
+        <div class="ai-nav__group">
+          <span class="ai-nav__group-label">Справка</span>
+          <div class="ai-nav__items">
+            <a class="ai-nav__link {{ 'ai-nav__link--active' if request.path.startswith('/admin/legend') }}" href="/admin/legend">
+              <span class="ai-nav__icon">🗺️</span> Обозначения
+            </a>
+          </div>
+        </div>
       </nav>
 
       <div class="ai-sidebar__footer">
+        <button type="button" id="theme-toggle" class="ai-sidebar__logout" style="margin-bottom:8px;"
+                title="Переключить светлую/тёмную тему (запоминается в браузере)">
+          <span id="theme-toggle__icon">☀️</span><span id="theme-toggle__label">Светлая тема</span>
+        </button>
         <form method="post" action="/admin/logout">
           <button type="submit" class="ai-sidebar__logout">⏻ Выйти</button>
         </form>
@@ -528,5 +597,30 @@
   </div>
 
   {% block extra_js %}{% endblock %}
+  <script>
+    /* Переключатель День/ночь: стиль и подпись как у «Выйти», запись в
+       `ai-theme` — общий ключ с RF/AIC/RAR. Подпись показывает ЦЕЛЕВУЮ
+       тему (в тёмной — «Светлая тема»). */
+    (function () {
+      var btn = document.getElementById('theme-toggle');
+      if (!btn) return;
+      function current() {
+        return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      }
+      function render() {
+        var light = current() === 'light';
+        document.getElementById('theme-toggle__icon').textContent = light ? '🌙' : '☀️';
+        document.getElementById('theme-toggle__label').textContent = light ? 'Тёмная тема' : 'Светлая тема';
+      }
+      btn.addEventListener('click', function () {
+        var next = current() === 'light' ? 'dark' : 'light';
+        if (next === 'light') document.documentElement.setAttribute('data-theme', 'light');
+        else document.documentElement.removeAttribute('data-theme');
+        try { localStorage.setItem('ai-theme', next); } catch (e) { /* приватный режим */ }
+        render();
+      });
+      render();
+    })();
+  </script>
 </body>
 </html>

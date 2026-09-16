@@ -18,15 +18,14 @@
 {% set fqs = pairs | urlencode %}
 
 {# ── Макросы ───────────────────────────────────────────────────────────── #}
+{# Канон чип-контракта (LIFECYCLE_STATUS, AIC): исход события — ✔︎/❌/🔄;
+   эмодзи заменяет точку (класс ai-status--emoji). #}
 {% macro status_badge(status_val) -%}
-<span class="ai-status {% if status_val == 'success' %}ai-status--ok{% elif status_val == 'failed' %}ai-status--error{% elif status_val == 'running' %}ai-status--warning{% else %}ai-status--muted{% endif %}">
-  {% if status_val == 'success' %}успешно{% elif status_val == 'failed' %}ошибка{% elif status_val == 'running' %}в процессе{% else %}{{ status_val or '—' }}{% endif %}
-</span>
+{% if status_val == 'success' %}<span class="ai-status ai-status--emoji ai-status--ok" title="Успех: сессия дошла до конца, аудит сохранён">✔︎</span>{% elif status_val == 'failed' %}<span class="ai-status ai-status--emoji ai-status--error" title="Ошибка: прервана на шаге — место сбоя видно в таймлайне">❌</span>{% elif status_val == 'running' %}<span class="ai-status ai-status--emoji ai-status--warning" title="В процессе: воркер ещё обрабатывает файл">🔄</span>{% else %}<span class="ai-status ai-status--emoji ai-status--muted" title="Статус неизвестен">➖</span>{% endif %}
 {%- endmacro %}
 
 {% macro step_status_badge(status_val) -%}
-<span class="ai-status {% if status_val == 'ok' %}ai-status--ok{% elif status_val == 'failed' %}ai-status--error{% elif status_val == 'running' %}ai-status--warning{% else %}ai-status--muted{% endif %}">
-  {% if status_val == 'ok' %}ok{% elif status_val == 'failed' %}error{% elif status_val == 'running' %}running{% else %}{{ status_val or '—' }}{% endif %}</span>
+{% if status_val == 'ok' %}<span class="ai-status ai-status--emoji ai-status--ok" title="Успех: шаг завершился без ошибок">✔︎</span>{% elif status_val == 'failed' %}<span class="ai-status ai-status--emoji ai-status--error" title="Ошибка: шаг прерван, причина в payload шага">❌</span>{% elif status_val == 'running' %}<span class="ai-status ai-status--emoji ai-status--warning" title="В процессе: шаг ещё выполняется">🔄</span>{% else %}<span class="ai-status ai-status--emoji ai-status--muted" title="Статус неизвестен">➖</span>{% endif %}
 {%- endmacro %}
 
 {% macro stage_label(name) -%}

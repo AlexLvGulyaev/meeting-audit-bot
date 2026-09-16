@@ -24,10 +24,16 @@
 <span class="ai-status {% if action_val in error_actions %}ai-status--error{% elif action_val in ok_actions %}ai-status--ok{% else %}ai-status--muted{% endif %}">{{ action_val }}</span>
 {%- endmacro %}
 
+{# Роль значком (канон ролей chipContract/AUDIT_ROLE, как в RAR):
+   🛡️ админ / 🎭 демо / 👤 пользователь (Telegram) / 🚫 без роли. #}
+{% macro role_chip(role_val) -%}
+{% if role_val == 'admin' %}<span class="ai-status ai-status--emoji ai-status--ok" title="Роль: админ — полный доступ по токену оператора">🛡️</span>{% elif role_val == 'demo' %}<span class="ai-status ai-status--emoji ai-status--muted" title="Роль: демо — read-only сессия витрины">🎭</span>{% elif role_val == 'user' %}<span class="ai-status ai-status--emoji ai-status--ok" title="Роль: пользователь — действие в Telegram-боте">👤</span>{% else %}<span class="ai-status ai-status--emoji ai-status--error" title="Событие без авторизации">🚫</span>{% endif %}
+{%- endmacro %}
+
 {% macro detail_panel(e) -%}
   <div class="ai-detail-head">
     <h2 class="ai-section__title">ДЕТАЛИЗАЦИЯ СОБЫТИЯ</h2>
-    <div>{{ action_badge(e.action) }}</div>
+    <div>{{ role_chip(e.user_role) }} {{ action_badge(e.action) }}</div>
   </div>
 
   <div class="ai-grid ai-grid--2" style="margin-bottom:12px;">
@@ -42,7 +48,7 @@
       <h4 class="ai-section-box__title">Параметры пользователя</h4>
       <div class="ai-compact-row"><span class="ai-compact-row__label">ID пользователя</span><span class="ai-compact-row__value ai-compact-row__value--mono">{{ e.user_id or '—' }}</span></div>
       <div class="ai-compact-row"><span class="ai-compact-row__label">Имя пользователя</span><span class="ai-compact-row__value">{{ e.user_name or '—' }}</span></div>
-      <div class="ai-compact-row"><span class="ai-compact-row__label">Роль</span><span class="ai-compact-row__value">{{ e.user_role or '—' }}</span></div>
+      <div class="ai-compact-row"><span class="ai-compact-row__label">Роль</span><span class="ai-compact-row__value">{{ role_chip(e.user_role) }} {{ e.user_role or '—' }}</span></div>
       <div class="ai-compact-row"><span class="ai-compact-row__label">IP-адрес</span><span class="ai-compact-row__value ai-compact-row__value--mono">{{ e.ip_address or '—' }}</span></div>
       <div class="ai-compact-row"><span class="ai-compact-row__label">Дата события</span><span class="ai-compact-row__value">{{ e.created_at| dtformat('%Y-%m-%d %H:%M:%S') if e.created_at else '—' }}</span></div>
     </div>
@@ -120,7 +126,7 @@
       <a class="ai-log-card {{ 'ai-log-card--active' if selected_id == e.id }}" data-id="{{ e.id }}" href="?{{ fqs }}{% if fqs %}&{% endif %}offset={{ offset }}&selected={{ e.id }}">
         <div class="ai-log-card__head">
           <span class="muted">{{ e.created_at| dtformat('%Y-%m-%d %H:%M:%S') if e.created_at else '—' }}</span>
-          {{ action_badge(e.action) }}
+          <span>{{ role_chip(e.user_role) }} {{ action_badge(e.action) }}</span>
         </div>
         <div class="ai-log-card__title">{{ e.resource_type or '—' }}{% if e.resource_id %} / {{ e.resource_id }}{% endif %}</div>
         <div class="ai-log-card__meta">
