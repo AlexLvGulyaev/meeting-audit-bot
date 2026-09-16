@@ -1,10 +1,6 @@
 # 🎬 SYSTEM_DEMO.md — Meeting Audit Bot
 
-**Проект:** meeting-audit-bot
-**Дата:** 2026-08-16
-**Статус:** as-built — скриншот-тур по живому демо.
-
-🤖 **Telegram-бот:** @PEcb10_bot
+🤖 **Telegram-бот:** @audit_bot
 🖥️ **Live Demo операторской панели:** https://meeting-audit-bot.alex-n8n.site/admin
 
 Полный скриншот-тур по системе: Telegram-контур пользователя, операторская панель
@@ -14,7 +10,7 @@
 
 ## 🚀 1. Как открыть live demo
 
-1. Откройте Telegram, найдите бота @PEcb10_bot.
+1. Откройте Telegram, найдите бота @audit_bot.
 2. Отправьте `/start` — увидите приветствие и список сценариев аудита.
 3. Отправьте аудио или видео — через 30–120 секунд получите Markdown-аудит.
 4. Операторская панель: https://meeting-audit-bot.alex-n8n.site/admin — два пути входа:
@@ -127,9 +123,15 @@ Dashboard показывает:
 
 ---
 
-## 📚 Связанные документы
+## 📚 4. Связанные документы
 
 - [🎬 `E2E_SCENARIOS.md`](E2E_SCENARIOS.md) — пошаговые E2E-сценарии.
 - [🎛️ `OPERATOR_GUIDE.md`](OPERATOR_GUIDE.md) — как пользоваться панелью.
 - [📖 `USER_GUIDE.md`](USER_GUIDE.md) — руководство пользователя Telegram-бота.
 - [🖼️ `MEDIA_INDEX.md`](MEDIA_INDEX.md) — каталог всех скриншотов.
+
+---
+
+**Статус:** as-built — скриншот-тур по живому демо
+**Последнее обновление:** 2026-09-16
+**История изменений:** [📝 CHANGE_LOG.md](CHANGE_LOG.md#-1-история-изменений-документации)

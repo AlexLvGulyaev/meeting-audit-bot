@@ -1,9 +1,5 @@
 # 🚀 DEPLOYMENT_GUIDE.md — Meeting Audit Bot
 
-**Проект:** meeting-audit-bot
-**Дата:** 2026-08-16
-**Статус:** Source of Truth воспроизводимости развёртывания.
-
 > 📌 **SOT-дисциплина:** этот документ — единственный источник истины процесса развёртывания. Критерий качества — **успешное развёртывание по инструкции**, а не качество текста. Если после полного выполнения система не работоспособна — документ не актуален. Валидация — запуском в чистом окружении (см. [✅ DEPLOYMENT_VALIDATION_REPORT.md](DEPLOYMENT_VALIDATION_REPORT.md)).
 
 ---
@@ -232,9 +228,15 @@ docker compose down -v
 
 ---
 
-## 📚 Связанные документы
+## 📚 10. Связанные документы
 
 - [✅ `DEPLOYMENT_VALIDATION_REPORT.md`](DEPLOYMENT_VALIDATION_REPORT.md) — отчёт о воспроизводимости.
 - [🛡️ `SECURITY_NOTES.md`](SECURITY_NOTES.md) — секреты, RBAC, лимиты.
 - [🧪 `TESTING.md`](TESTING.md) — как проверить работоспособность.
 - [🎬 `E2E_SCENARIOS.md`](E2E_SCENARIOS.md) — сквозные сценарии.
+
+---
+
+**Статус:** as-built · Source of Truth развёртывания
+**Последнее обновление:** 2026-09-16
+**История изменений:** [📝 CHANGE_LOG.md](CHANGE_LOG.md#-1-история-изменений-документации)

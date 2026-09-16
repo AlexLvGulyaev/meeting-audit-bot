@@ -1,8 +1,6 @@
 # 🏗️ ARCHITECTURE.md — Meeting Audit Bot
 
-**Проект:** meeting-audit-bot
-**Дата:** 2026-08-16
-**Статус:** Engineering Layer — архитектура и путь данных.
+<img src="screenshots/mab_portfolio_dark.png" alt="Meeting Audit Bot — архитектурная витрина: Telegram, FastAPI-конвейер, AssemblyAI, LLM-провайдеры (DARK)">
 
 ---
 
@@ -174,7 +172,7 @@ erDiagram
     execution_steps }o--|| execution_sessions : "session_id CASCADE"
 ```
 
-**Ключевые факты модели:**
+**Главные факты модели:**
 
 - `video_audits` — результат обработки: транскрипт, аудит, метаданные файла, провайдер, промпт.
 - `execution_sessions` + `execution_steps` — контур execution-tracing. Шаги: `download`, `transcribe`, `audit`, `notify`.
@@ -357,7 +355,7 @@ flowchart LR
 
 ---
 
-## 📚 Связанные документы
+## 📚 10. Связанные документы
 
 - [🏠 `README.md`](../README.md) — главная страница проекта.
 - [📋 `docs/SPEC.md`](SPEC.md) — функциональная спецификация.
@@ -365,3 +363,9 @@ flowchart LR
 - [🔌 `docs/API_CONTRACT.md`](API_CONTRACT.md) — HTTP API.
 - [🛡️ `docs/SECURITY_NOTES.md`](SECURITY_NOTES.md) — безопасность.
 - [🚀 `docs/DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) — развёртывание.
+
+---
+
+**Статус:** as-built
+**Последнее обновление:** 2026-09-16
+**История изменений:** [📝 CHANGE_LOG.md](CHANGE_LOG.md#-1-история-изменений-документации)

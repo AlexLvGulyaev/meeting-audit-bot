@@ -1,9 +1,5 @@
 # 🛡️ SECURITY_NOTES.md — Meeting Audit Bot
 
-**Проект:** meeting-audit-bot
-**Дата:** 2026-08-16
-**Статус:** Engineering Layer — безопасность, доступ, демо-RBAC, лимиты.
-
 ---
 
 ## 🔐 1. Секреты
@@ -96,8 +92,14 @@ Cookie-based auth решает три проблемы HTTP Basic:
 
 ---
 
-## 📚 Связанные документы
+## 📚 6. Связанные документы
 
 - [🔌 `API_CONTRACT.md`](API_CONTRACT.md) — коды ошибок и контракты.
 - [🎛️ `OPERATOR_GUIDE.md`](OPERATOR_GUIDE.md) — как пользоваться RBAC.
 - [🚀 `DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) — развёртывание.
+
+---
+
+**Статус:** as-built
+**Последнее обновление:** 2026-09-16
+**История изменений:** [📝 CHANGE_LOG.md](CHANGE_LOG.md#-1-история-изменений-документации)

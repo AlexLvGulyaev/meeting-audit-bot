@@ -1,9 +1,5 @@
 # 🎛️ OPERATOR_GUIDE.md — Meeting Audit Bot
 
-**Проект:** meeting-audit-bot
-**Дата:** 2026-08-16
-**Статус:** Руководство оператора: как менять поведение системы без программирования, пересборки и рестарта контейнера.
-
 > 🌐 Адреса: живое демо — `https://meeting-audit-bot.alex-n8n.site/admin`;
 > локальный инстанс — `http://localhost:8000/admin` (по [🚀 DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)).
 
@@ -114,7 +110,7 @@ override (`storage/prompts/*.md`). Оператор видит объединё�
 
 *«Проверить»: toast с результатом real-вызова.*
 
-**Ключевое:** LLM-ключи живут **только в `.env` на контейнере** — через `/admin` их не видно.
+**Важно:** LLM-ключи живут **только в `.env` на контейнере** — через `/admin` их не видно.
 Событие пишется в аудит (`admin.provider_test`).
 
 ---
@@ -179,9 +175,15 @@ override (`storage/prompts/*.md`). Оператор видит объединё�
 
 ---
 
-## 📚 Связанные документы
+## 📚 9. Связанные документы
 
 - [🔌 `API_CONTRACT.md`](API_CONTRACT.md) — контракты HTTP API.
 - [🛡️ `SECURITY_NOTES.md`](SECURITY_NOTES.md) — аутентификация и RBAC.
 - [📝 `PROMPT_ARCHITECTURE.md`](PROMPT_ARCHITECTURE.md) — структура и lifecycle промптов.
 - [🎬 `E2E_SCENARIOS.md`](E2E_SCENARIOS.md) — пошаговые сценарии проверки.
+
+---
+
+**Статус:** as-built
+**Последнее обновление:** 2026-09-16
+**История изменений:** [📝 CHANGE_LOG.md](CHANGE_LOG.md#-1-история-изменений-документации)

@@ -1,12 +1,6 @@
 # 🤖 EXTERNAL_PROVIDERS.md — Meeting Audit Bot
 
-**Проект:** meeting-audit-bot
-**Дата:** 2026-08-16
-**Статус:** исследовательская справка. Source of Truth — официальные доки провайдеров + код адаптеров (правило: внешняя интеграция — официальная документация, не память модели).
-
----
-
-## 📋 Краткая сводка
+## 📋 1. Краткая сводка
 
 | Провайдер | base_url | Модель (по умолчанию) | Auth | Назначение |
 |-----------|----------|----------------------|------|------------|
@@ -16,7 +10,7 @@
 
 ---
 
-## 🎙️ 1. AssemblyAI — STT + диаризация
+## 🎙️ 2. AssemblyAI — STT + диаризация
 
 - **Upload:** `POST /upload` — загрузка аудиофайла, возвращает `upload_url`.
 - **Transcript:** `POST /transcript` — создание задачи транскрибации.
@@ -33,7 +27,7 @@
 
 ---
 
-## 🟢 2. OpenAI — LLM-аудит (OpenAI-compatible)
+## 🟢 3. OpenAI — LLM-аудит (OpenAI-compatible)
 
 - **base_url:** `https://api.openai.com/v1` (редактируется в `/admin`, поле `openai_base_url`). Любой OpenAI-compatible endpoint указывается через `base_url`.
 - **Модель:** `gpt-4.1-mini` (редактируется в `/admin`, поле `openai_model`).
@@ -44,7 +38,7 @@
 
 ---
 
-## 🤖 3. GigaChat (Сбер) — LLM fallback
+## 🤖 4. GigaChat (Сбер) — LLM fallback
 
 - **base_url:** `https://gigachat.devices.sberbank.ru/api/v1` (read-only из `.env`). Фиксированный эндпоинт Сбера с OAuth-обменом и сертификатом Минцифры — смена требует правки `.env` и рестарта.
 - **Модель:** `GigaChat` (редактируется в `/admin`, поле `gigachat_model`).
@@ -67,7 +61,7 @@
 
 ---
 
-## 🔌 4. Fallback-цепочка LLM
+## 🔌 5. Fallback-цепочка LLM
 
 Цепочка fallback в `AuditService.analyze`:
 
@@ -79,7 +73,7 @@ Execution-трейс фиксирует фактического провайд�
 
 ---
 
-## 🔧 5. Источники
+## 🔧 6. Источники
 
 - [AssemblyAI API Reference — Transcript](https://www.assemblyai.com/docs/api-reference/transcripts)
 - [OpenAI API Reference — Chat Completions](https://platform.openai.com/docs/api-reference/chat)
@@ -87,8 +81,13 @@ Execution-трейс фиксирует фактического провайд�
 
 ---
 
-## 📚 Связанные документы
+## 📚 7. Связанные документы
 
 - [🏗️ `docs/ARCHITECTURE.md`](ARCHITECTURE.md) — архитектура, мультипровайдерность, runtime-config.
 - [🔌 `docs/API_CONTRACT.md`](API_CONTRACT.md) — `/admin` поля.
 - [🛡️ `docs/SECURITY_NOTES.md`](SECURITY_NOTES.md) — секреты провайдеров в `.env`.
+
+---
+**Статус:** Исследовательская справка · Source of Truth — официальные доки провайдеров + код адаптеров (правило: внешняя интеграция — официальная документация, не память модели)
+**Последнее обновление:** 2026-09-16
+**История изменений:** [📝 CHANGE_LOG.md](CHANGE_LOG.md#-1-история-изменений-документации)

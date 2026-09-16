@@ -1,9 +1,5 @@
 # 🔌 API_CONTRACT.md — Meeting Audit Bot
 
-**Проект:** meeting-audit-bot
-**Дата:** 2026-08-16
-**Статус:** Engineering Layer — контракты HTTP API бота и операторской панели.
-
 Базовый URL сайта: `http://localhost:8000` (после `docker compose up` с публикацией порта) или `https://your-domain` (production).
 
 ---
@@ -253,9 +249,15 @@ Security audit log (HTML). Поддерживает query-параметры:
 
 ---
 
-## 📚 Связанные документы
+## 📚 8. Связанные документы
 
 - [🏗️ `ARCHITECTURE.md`](ARCHITECTURE.md) — архитектура, runtime-config.
 - [🛡️ `SECURITY_NOTES.md`](SECURITY_NOTES.md) — аутентификация и RBAC.
 - [🎛️ `OPERATOR_GUIDE.md`](OPERATOR_GUIDE.md) — как пользоваться панелью.
 - [🧪 `TESTING.md`](TESTING.md) — примеры curl-команд.
+
+---
+
+**Статус:** as-built
+**Последнее обновление:** 2026-09-16
+**История изменений:** [📝 CHANGE_LOG.md](CHANGE_LOG.md#-1-история-изменений-документации)

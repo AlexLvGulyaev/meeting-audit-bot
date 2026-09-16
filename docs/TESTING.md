@@ -1,10 +1,5 @@
 # 🧪 TESTING.md — Meeting Audit Bot
 
-**Проект:** meeting-audit-bot
-**Версия:** 1.0
-**Дата:** 2026-08-16
-**Статус:** Active — Deployment Validation пройдена, ручные E2E-сценарии, программные smoke-проверки конвейера.
-
 > 📌 **Важно.** У проекта нет pytest-набора unit/integration-тестов. Проверка ведётся
 > на четырёх уровнях: воспроизведение с нуля (L1), ручные сквозные сценарии (L2),
 > программные smoke-проверки детерминированного ядра (L3), верификация провайдеров
@@ -143,8 +138,14 @@ OpenAI/GigaChat) и в observability. Поэтому проверка сфоку
 
 ---
 
-## 📚 Связанные документы
+## 📚 8. Связанные документы
 
 - [✅ `DEPLOYMENT_VALIDATION_REPORT.md`](DEPLOYMENT_VALIDATION_REPORT.md) — отчёт L1.
 - [🎬 `E2E_SCENARIOS.md`](E2E_SCENARIOS.md) — ручные сценарии L2.
 - [🔌 `EXTERNAL_PROVIDERS.md`](EXTERNAL_PROVIDERS.md) — параметры провайдеров L4.
+
+---
+
+**Статус:** Active — Deployment Validation пройдена (30.08), ручные E2E-сценарии, программные smoke-проверки конвейера
+**Последнее обновление:** 2026-09-16
+**История изменений:** [📝 CHANGE_LOG.md](CHANGE_LOG.md#-1-история-изменений-документации)

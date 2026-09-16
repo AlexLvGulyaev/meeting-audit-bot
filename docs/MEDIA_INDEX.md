@@ -1,6 +1,12 @@
-# MEDIA_INDEX — Meeting Audit Bot
+# 📸 MEDIA_INDEX — Meeting Audit Bot
 
-Скриншоты E2E-сценариев и иллюстрации для README/DEPLOYMENT_GUIDE.
+## 🎯 1. Назначение
+
+Каталог скриншотов E2E-сценариев и иллюстраций Meeting Audit Bot. Все изображения используются в публичной документации и верифицированы перед публикацией.
+
+---
+
+## 📂 2. Каталог изображений
 
 | # | Файл | Сценарий | Статус |
 |---|------|----------|--------|
@@ -20,3 +26,21 @@
 | 14 | `docs/screenshots/admin-provider-test.png` | Админка `/admin`: тест провайдера с toast-уведомлением | ✅ Готов |
 
 > **Опционально:** `docs/screenshots/tg-daily-limit.png` — Telegram сообщение о дневном лимите обработок. Не включено в обязательный E2E, так как требует 6 отправок с неадминского аккаунта.
+
+| 15 | `docs/screenshots/mab_portfolio_light.png` | Витрина кейса — светлая тема | README.md (hero, LIGHT) |
+| 16 | `docs/screenshots/mab_portfolio_dark.png` | Витрина кейса — тёмная тема | ARCHITECTURE.md (hero, DARK) |
+
+---
+
+## 📚 3. Связанные документы
+
+- [🏠 `README.md`](../README.md) — главная страница проекта.
+- [🎬 `docs/E2E_SCENARIOS.md`](E2E_SCENARIOS.md) — сквозные сценарии и чек-лист скриншотов.
+- [🎬 `docs/SYSTEM_DEMO.md`](SYSTEM_DEMO.md) — нарратив демо и скриншоты.
+- [🚀 `docs/DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) — развёртывание и проверка.
+
+---
+
+**Статус:** as-built
+**Последнее обновление:** 2026-09-16
+**История изменений:** [📝 CHANGE_LOG.md](CHANGE_LOG.md#-1-история-изменений-документации)
